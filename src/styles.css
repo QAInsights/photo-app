@@ -25,8 +25,7 @@
   --radius-lg: 18px;
   --radius-xl: 28px;
 
-  --shadow-print: 0 18px 40px -24px rgb(28 25 22 / 0.45),
-    0 2px 6px -2px rgb(28 25 22 / 0.12);
+  --shadow-print: 0 18px 40px -24px rgb(28 25 22 / 0.45), 0 2px 6px -2px rgb(28 25 22 / 0.12);
 }
 
 @layer base {
@@ -120,5 +119,32 @@
   }
   50% {
     opacity: 1;
+  }
+}
+
+.dialog-overlay-in {
+  animation: fade-in var(--motion-quick) var(--ease-out) both;
+}
+.dialog-content-in {
+  animation: dialog-pop-in var(--motion-fast) var(--ease-smooth-out) both;
+}
+
+@keyframes fade-in {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes dialog-pop-in {
+  from {
+    opacity: 0;
+    transform: translate(-50%, -50%) scale(var(--motion-scale-modal));
+  }
+  to {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
   }
 }

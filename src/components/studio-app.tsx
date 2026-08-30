@@ -4,6 +4,7 @@ import {
   Eraser,
   ImageIcon,
   LoaderCircle,
+  Settings,
   SunMedium,
   Trash2,
   Upload,
@@ -12,21 +13,13 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { toast } from "sonner";
 import { CompareStage } from "@/components/compare-stage";
 import { Mark } from "@/components/mark";
+import { SettingsDialog } from "@/components/settings-dialog";
 import { Button } from "@/components/ui/button";
 import { finishPhoto, studioStatus } from "@/lib/finish";
-import {
-  dataUrlToPrint,
-  downloadDataUrl,
-  fileToLoadedPhoto,
-  resizeDataUrl,
-} from "@/lib/image-io";
+import { dataUrlToPrint, downloadDataUrl, fileToLoadedPhoto, resizeDataUrl } from "@/lib/image-io";
+import { loadBrowserApiKey } from "@/lib/key-store";
 import { enhanceLocally } from "@/lib/local-enhance";
-import {
-  buildPrompt,
-  RECIPES,
-  type Engine,
-  type RecipeId,
-} from "@/lib/presets";
+import { buildPrompt, RECIPES, type Engine, type RecipeId } from "@/lib/presets";
 import { cn } from "@/lib/utils";
 
 type Status = "idle" | "working" | "done" | "error";
@@ -60,7 +53,9 @@ export function StudioApp() {
   const [custom, setCustom] = useState("");
   const [engine, setEngine] = useState<Engine>("ai");
   const [resolution, setResolution] = useState<"1k" | "2k">("2k");
-  const [aiOn, setAiOn] = useState<boolean | null>(null);
+  const [serverAi, setServerAi] = useState<boolean | null>(null);
+  const [browserKey, setBrowserKey] = useState<string | null>(null);
+  const [settingsOpen, setSettingsOpen] = useState(false);
   const [peek, setPeek] = useState(false);
   const [dragOver, setDragOver] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
@@ -69,16 +64,29 @@ export function StudioApp() {
   const selected = photos.find((p) => p.id === selectedId) ?? photos[0];
 
   useEffect(() => {
-    studioStatus()
-      .then((s) => {
-        setAiOn(s.available);
-        if (!s.available) setEngine("local");
-      })
-      .catch(() => {
-        setAiOn(false);
-        setEngine("local");
-      });
+    let alive = true;
+    Promise.all([
+      studioStatus()
+        .then((s) => s.available)
+        .catch(() => false),
+      loadBrowserApiKey().catch(() => null),
+    ]).then(([available, key]) => {
+      if (!alive) return;
+      setServerAi(available);
+      setBrowserKey(key);
+      if (!available && !key) setEngine("local");
+    });
+    return () => {
+      alive = false;
+    };
   }, []);
+
+  const refreshBrowserKey = useCallback(async () => {
+    const key = await loadBrowserApiKey().catch(() => null);
+    setBrowserKey(key);
+    if (key) setEngine("ai");
+    else if (serverAi === false) setEngine("local");
+  }, [serverAi]);
 
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
@@ -98,36 +106,39 @@ export function StudioApp() {
     };
   }, [selected?.resultUrl]);
 
-  const addFiles = useCallback(async (files: FileList | File[]) => {
-    const list = Array.from(files);
-    if (!list.length) return;
-    const room = 12 - photos.length;
-    if (room <= 0) {
-      toast.error("Twelve photos at a time. Remove one to add more.");
-      return;
-    }
-    const next: Photo[] = [];
-    for (const file of list.slice(0, room)) {
-      try {
-        const loaded = await fileToLoadedPhoto(file);
-        next.push({
-          id: loaded.id,
-          name: loaded.name,
-          blobUrl: loaded.blobUrl,
-          previewUrl: loaded.dataUrl,
-          width: loaded.width,
-          height: loaded.height,
-          aspect: loaded.aspect,
-          status: "idle",
-        });
-      } catch (err) {
-        toast.error(err instanceof Error ? err.message : "Could not read file.");
+  const addFiles = useCallback(
+    async (files: FileList | File[]) => {
+      const list = Array.from(files);
+      if (!list.length) return;
+      const room = 12 - photos.length;
+      if (room <= 0) {
+        toast.error("Twelve photos at a time. Remove one to add more.");
+        return;
       }
-    }
-    if (!next.length) return;
-    setPhotos((prev) => [...prev, ...next]);
-    setSelectedId((id) => id ?? next[0].id);
-  }, [photos.length]);
+      const next: Photo[] = [];
+      for (const file of list.slice(0, room)) {
+        try {
+          const loaded = await fileToLoadedPhoto(file);
+          next.push({
+            id: loaded.id,
+            name: loaded.name,
+            blobUrl: loaded.blobUrl,
+            previewUrl: loaded.dataUrl,
+            width: loaded.width,
+            height: loaded.height,
+            aspect: loaded.aspect,
+            status: "idle",
+          });
+        } catch (err) {
+          toast.error(err instanceof Error ? err.message : "Could not read file.");
+        }
+      }
+      if (!next.length) return;
+      setPhotos((prev) => [...prev, ...next]);
+      setSelectedId((id) => id ?? next[0].id);
+    },
+    [photos.length],
+  );
 
   useEffect(() => {
     const onPaste = (e: ClipboardEvent) => {
@@ -138,18 +149,11 @@ export function StudioApp() {
     return () => window.removeEventListener("paste", onPaste);
   }, [addFiles]);
 
-  const recipeMeta = useMemo(
-    () => RECIPES.find((r) => r.id === recipe) ?? RECIPES[0],
-    [recipe],
-  );
+  const recipeMeta = useMemo(() => RECIPES.find((r) => r.id === recipe) ?? RECIPES[0], [recipe]);
 
   async function finishOne(photo: Photo) {
     setPhotos((prev) =>
-      prev.map((p) =>
-        p.id === photo.id
-          ? { ...p, status: "working", error: undefined }
-          : p,
-      ),
+      prev.map((p) => (p.id === photo.id ? { ...p, status: "working", error: undefined } : p)),
     );
     try {
       let resultUrl: string;
@@ -167,22 +171,19 @@ export function StudioApp() {
             prompt: buildPrompt(recipe, custom),
             aspectRatio: photo.aspect,
             resolution,
+            apiKey: browserKey ?? undefined,
           },
         });
         if (!out.ok) throw new Error(out.error);
         resultUrl = await enhanceLocally(out.imageDataUrl);
       }
       setPhotos((prev) =>
-        prev.map((p) =>
-          p.id === photo.id ? { ...p, status: "done", resultUrl } : p,
-        ),
+        prev.map((p) => (p.id === photo.id ? { ...p, status: "done", resultUrl } : p)),
       );
     } catch (err) {
       const message = err instanceof Error ? err.message : "Finish failed.";
       setPhotos((prev) =>
-        prev.map((p) =>
-          p.id === photo.id ? { ...p, status: "error", error: message } : p,
-        ),
+        prev.map((p) => (p.id === photo.id ? { ...p, status: "error", error: message } : p)),
       );
       toast.error(message);
     }
@@ -203,13 +204,8 @@ export function StudioApp() {
 
   async function downloadPhoto(photo: Photo, print: boolean) {
     const src = photo.resultUrl ?? photo.previewUrl;
-    const file = print
-      ? await dataUrlToPrint(src)
-      : src;
-    downloadDataUrl(
-      file,
-      `${photo.name}-${print ? "print" : "hq"}.jpg`,
-    );
+    const file = print ? await dataUrlToPrint(src) : src;
+    downloadDataUrl(file, `${photo.name}-${print ? "print" : "hq"}.jpg`);
   }
 
   function removePhoto(id: string) {
@@ -231,19 +227,25 @@ export function StudioApp() {
         <div className="flex items-center gap-2.5">
           <Mark className="size-7 text-primary" />
           <div className="leading-tight">
-            <p className="font-display text-lg font-semibold tracking-tight">
-              Northlight
-            </p>
-            <p className="hidden text-xs text-muted-foreground sm:block">
-              Local photo studio
-            </p>
+            <p className="font-display text-lg font-semibold tracking-tight">Northlight</p>
+            <p className="hidden text-xs text-muted-foreground sm:block">Local photo studio</p>
           </div>
         </div>
-        <EngineSwitch
-          value={engine}
-          aiOn={aiOn !== false}
-          onChange={setEngine}
-        />
+        <div className="flex items-center gap-2">
+          <EngineSwitch
+            value={engine}
+            aiOn={serverAi !== false || browserKey !== null}
+            onChange={setEngine}
+          />
+          <Button
+            variant="outline"
+            size="icon"
+            aria-label="Settings"
+            onClick={() => setSettingsOpen(true)}
+          >
+            <Settings />
+          </Button>
+        </div>
       </header>
 
       <div className="mx-auto flex min-h-0 w-full max-w-[1400px] flex-1 flex-col overflow-y-auto lg:grid lg:grid-cols-[92px_minmax(0,1fr)_300px] lg:overflow-hidden">
@@ -290,9 +292,7 @@ export function StudioApp() {
 
         <aside className="order-2 flex flex-col gap-5 border-t border-border p-4 sm:p-5 lg:order-none lg:border-l lg:border-t-0">
           <div>
-            <p className="text-xs font-medium tracking-wide text-subtle uppercase">
-              Finish
-            </p>
+            <p className="text-xs font-medium tracking-wide text-subtle uppercase">Finish</p>
             <div className="mt-3 grid grid-cols-2 gap-2 lg:grid-cols-1">
               {RECIPES.map((item) => {
                 const Icon = RECIPE_ICON[item.id];
@@ -311,15 +311,11 @@ export function StudioApp() {
                   >
                     <Icon className="mt-0.5 size-4 shrink-0" />
                     <span>
-                      <span className="block text-sm font-medium">
-                        {item.label}
-                      </span>
+                      <span className="block text-sm font-medium">{item.label}</span>
                       <span
                         className={cn(
                           "mt-0.5 block text-xs leading-snug",
-                          active
-                            ? "text-primary-foreground/75"
-                            : "text-muted-foreground",
+                          active ? "text-primary-foreground/75" : "text-muted-foreground",
                         )}
                       >
                         {item.blurb}
@@ -348,9 +344,7 @@ export function StudioApp() {
           ) : null}
 
           <div className="flex items-center justify-between gap-3">
-            <p className="text-xs font-medium tracking-wide text-subtle uppercase">
-              Output
-            </p>
+            <p className="text-xs font-medium tracking-wide text-subtle uppercase">Output</p>
             <div className="flex rounded-full border border-border bg-card p-0.5">
               {(["1k", "2k"] as const).map((res) => (
                 <button
@@ -410,8 +404,8 @@ export function StudioApp() {
               </Button>
             ) : null}
             <p className="pt-1 text-xs leading-relaxed text-muted-foreground">
-              Photos stay in this browser. Studio AI sends a copy only when you
-              press Finish. Hold Space to peek the original.
+              Photos stay in this browser. Studio AI sends a copy only when you press Finish. Hold
+              Space to peek the original.
             </p>
           </div>
         </aside>
@@ -444,18 +438,20 @@ export function StudioApp() {
           Finish photo
         </Button>
       </div>
+
+      <SettingsDialog
+        open={settingsOpen}
+        onOpenChange={setSettingsOpen}
+        hasKey={browserKey !== null}
+        onKeyChanged={() => void refreshBrowserKey()}
+      />
     </div>
   );
 }
 
 function isTyping(e: KeyboardEvent) {
   const t = e.target as HTMLElement | null;
-  return Boolean(
-    t &&
-      (t.tagName === "TEXTAREA" ||
-        t.tagName === "INPUT" ||
-        t.isContentEditable),
-  );
+  return Boolean(t && (t.tagName === "TEXTAREA" || t.tagName === "INPUT" || t.isContentEditable));
 }
 
 function EngineSwitch({
@@ -473,9 +469,7 @@ function EngineSwitch({
         type="button"
         className={cn(
           "min-h-9 rounded-full px-3 text-xs font-medium sm:px-4 sm:text-sm",
-          value === "local"
-            ? "bg-primary text-primary-foreground"
-            : "text-muted-foreground",
+          value === "local" ? "bg-primary text-primary-foreground" : "text-muted-foreground",
         )}
         onClick={() => onChange("local")}
       >
@@ -486,9 +480,7 @@ function EngineSwitch({
         disabled={!aiOn}
         className={cn(
           "min-h-9 rounded-full px-3 text-xs font-medium sm:px-4 sm:text-sm",
-          value === "ai"
-            ? "bg-primary text-primary-foreground"
-            : "text-muted-foreground",
+          value === "ai" ? "bg-primary text-primary-foreground" : "text-muted-foreground",
         )}
         onClick={() => aiOn && onChange("ai")}
       >
@@ -529,9 +521,7 @@ function Filmstrip({
             onClick={() => onSelect(photo.id)}
             className={cn(
               "block size-16 overflow-hidden rounded-md border lg:h-20 lg:w-full",
-              selectedId === photo.id
-                ? "border-primary ring-2 ring-ring/40"
-                : "border-border",
+              selectedId === photo.id ? "border-primary ring-2 ring-ring/40" : "border-border",
             )}
           >
             <img
@@ -594,9 +584,7 @@ function DropEmpty({
         onClick={onBrowse}
         className={cn(
           "stagger-in flex w-full max-w-lg flex-col items-center gap-4 rounded-xl border border-dashed px-6 py-16 text-center transition-colors duration-[var(--motion-fast)]",
-          dragOver
-            ? "border-primary bg-secondary"
-            : "border-border bg-card hover:bg-secondary/70",
+          dragOver ? "border-primary bg-secondary" : "border-border bg-card hover:bg-secondary/70",
         )}
       >
         <Mark className="size-12 text-primary" />
@@ -605,8 +593,8 @@ function DropEmpty({
             Drop proofs here
           </h1>
           <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-            Yearbook scans, watermarked previews, everyday portraits. Finish on
-            this device or send to Studio AI. Nothing is stored on a server.
+            Yearbook scans, watermarked previews, everyday portraits. Finish on this device or send
+            to Studio AI. Nothing is stored on a server.
           </p>
         </div>
         <span className="inline-flex min-h-11 items-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground">

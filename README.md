@@ -28,12 +28,14 @@ Open the printed local URL. Default port is **8080**.
 
 ## Engines
 
-| Engine | What it does | Leaves the device |
-| --- | --- | --- |
-| On device | Contrast, color, sharpen | No |
+| Engine    | What it does                        | Leaves the device          |
+| --------- | ----------------------------------- | -------------------------- |
+| On device | Contrast, color, sharpen            | No                         |
 | Studio AI | Watermark removal, backdrop replace | Only when you press Finish |
 
 Studio AI calls `https://api.x.ai/v1/images/edits` with `grok-imagine-image-2.0`. Set `XAI_API_KEY` in `.env`. Without a key, the app stays on-device.
+
+You can also bring your own key in the app: open **Settings** (top right) and paste it. It is stored AES-256-GCM encrypted in this browser only, takes precedence over the server key, and can be removed again from the same dialog.
 
 Photos are not stored on a server.
 

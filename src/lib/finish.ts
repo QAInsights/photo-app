@@ -6,6 +6,9 @@ const Input = z.object({
   prompt: z.string().min(8).max(2000),
   aspectRatio: z.string().max(12),
   resolution: z.enum(["1k", "2k"]),
+  // Browser-supplied xAI key (Settings). Used for this request only — never
+  // persisted server-side — and wins over the deployment's XAI_API_KEY.
+  apiKey: z.string().trim().max(256).optional(),
 });
 
 type FinishOk = { ok: true; imageDataUrl: string };
@@ -77,7 +80,7 @@ async function callEdits(
 export const finishPhoto = createServerFn({ method: "POST" })
   .validator((input: unknown) => Input.parse(input))
   .handler(async ({ data }): Promise<FinishResult> => {
-    const apiKey = process.env.XAI_API_KEY;
+    const apiKey = data.apiKey || process.env.XAI_API_KEY;
     if (!apiKey) {
       return {
         ok: false,
@@ -116,6 +119,6 @@ export const finishPhoto = createServerFn({ method: "POST" })
     }
   });
 
-export const studioStatus = createServerFn({ method: "GET" }).handler(
-  async () => ({ available: Boolean(process.env.XAI_API_KEY) }),
-);
+export const studioStatus = createServerFn({ method: "GET" }).handler(async () => ({
+  available: Boolean(process.env.XAI_API_KEY),
+}));
