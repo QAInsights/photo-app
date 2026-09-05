@@ -1,5 +1,6 @@
 import {
   Check,
+  Coffee,
   Download,
   Eraser,
   ImageIcon,
@@ -9,7 +10,7 @@ import {
   Trash2,
   Upload,
 } from "lucide-react";
-import { useCallback, useEffect, useMemo, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { CompareStage } from "@/components/compare-stage";
 import { Mark } from "@/components/mark";
@@ -18,9 +19,15 @@ import { Button } from "@/components/ui/button";
 import { finishPhoto, studioStatus } from "@/lib/finish";
 import { dataUrlToPrint, downloadDataUrl, fileToLoadedPhoto, resizeDataUrl } from "@/lib/image-io";
 import { loadBrowserApiKey } from "@/lib/key-store";
-import { enhanceLocally } from "@/lib/local-enhance";
-import { buildPrompt, RECIPES, type Engine, type RecipeId } from "@/lib/presets";
+import { buildPrompt, recipeById, RECIPES, type RecipeId } from "@/lib/presets";
 import { cn } from "@/lib/utils";
+
+const XAI_PRIVACY_POLICY = "https://x.ai/legal/privacy-policy";
+const DONATE_URL = "https://buymeacoffee.com/qainsights";
+const SITE_LINKS = [
+  { href: "https://qainsights.com", label: "qainsights.com" },
+  { href: "https://ai.dosa.dev", label: "ai.dosa.dev" },
+] as const;
 
 type Status = "idle" | "working" | "done" | "error";
 
@@ -51,7 +58,6 @@ export function StudioApp() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [recipe, setRecipe] = useState<RecipeId>("proof");
   const [custom, setCustom] = useState("");
-  const [engine, setEngine] = useState<Engine>("ai");
   const [resolution, setResolution] = useState<"1k" | "2k">("2k");
   const [serverAi, setServerAi] = useState<boolean | null>(null);
   const [browserKey, setBrowserKey] = useState<string | null>(null);
@@ -74,7 +80,6 @@ export function StudioApp() {
       if (!alive) return;
       setServerAi(available);
       setBrowserKey(key);
-      if (!available && !key) setEngine("local");
     });
     return () => {
       alive = false;
@@ -84,9 +89,7 @@ export function StudioApp() {
   const refreshBrowserKey = useCallback(async () => {
     const key = await loadBrowserApiKey().catch(() => null);
     setBrowserKey(key);
-    if (key) setEngine("ai");
-    else if (serverAi === false) setEngine("local");
-  }, [serverAi]);
+  }, []);
 
   useEffect(() => {
     const down = (e: KeyboardEvent) => {
@@ -149,36 +152,44 @@ export function StudioApp() {
     return () => window.removeEventListener("paste", onPaste);
   }, [addFiles]);
 
-  const recipeMeta = useMemo(() => RECIPES.find((r) => r.id === recipe) ?? RECIPES[0], [recipe]);
+  const aiReady = serverAi !== false || browserKey !== null;
+  const recipeMeta = recipeById(recipe);
+  const customReady = recipe !== "custom" || custom.trim().length > 0;
+  const canFinish = Boolean(selected) && !working && aiReady && customReady;
 
   async function finishOne(photo: Photo) {
+    if (!aiReady) {
+      toast.error("Add an xAI key in Settings to finish photos.");
+      setSettingsOpen(true);
+      return;
+    }
+    const activeRecipe = recipe;
+    const activeCustom = custom;
+    const activeResolution = resolution;
+    if (activeRecipe === "custom" && !activeCustom.trim()) {
+      toast.error("Add instructions for Custom before finishing.");
+      return;
+    }
     setPhotos((prev) =>
       prev.map((p) => (p.id === photo.id ? { ...p, status: "working", error: undefined } : p)),
     );
     try {
-      let resultUrl: string;
-      if (engine === "local" || !recipeMeta.needsAi) {
-        resultUrl = await enhanceLocally(photo.previewUrl);
-        if (engine === "local" && recipeMeta.needsAi) {
-          toast.message("On-device enhance applied. Watermark removal needs Studio AI.");
-        }
-      } else {
-        const maxEdge = resolution === "2k" ? 1536 : 1280;
-        const payload = await resizeDataUrl(photo.previewUrl, maxEdge, 0.84);
-        const out = await finishPhoto({
-          data: {
-            imageDataUrl: payload,
-            prompt: buildPrompt(recipe, custom),
-            aspectRatio: photo.aspect,
-            resolution,
-            apiKey: browserKey ?? undefined,
-          },
-        });
-        if (!out.ok) throw new Error(out.error);
-        resultUrl = await enhanceLocally(out.imageDataUrl);
-      }
+      const maxEdge = activeResolution === "2k" ? 1536 : 1280;
+      const payload = await resizeDataUrl(photo.previewUrl, maxEdge, 0.84);
+      const out = await finishPhoto({
+        data: {
+          imageDataUrl: payload,
+          prompt: buildPrompt(activeRecipe, activeCustom),
+          aspectRatio: "auto",
+          resolution: activeResolution,
+          apiKey: browserKey ?? undefined,
+        },
+      });
+      if (!out.ok) throw new Error(out.error);
       setPhotos((prev) =>
-        prev.map((p) => (p.id === photo.id ? { ...p, status: "done", resultUrl } : p)),
+        prev.map((p) =>
+          p.id === photo.id ? { ...p, status: "done", resultUrl: out.imageDataUrl } : p,
+        ),
       );
     } catch (err) {
       const message = err instanceof Error ? err.message : "Finish failed.";
@@ -224,19 +235,23 @@ export function StudioApp() {
   return (
     <div className="paper-grain flex h-dvh flex-col overflow-hidden bg-background text-foreground">
       <header className="flex shrink-0 items-center justify-between gap-3 border-b border-border px-4 py-3 sm:px-6">
-        <div className="flex items-center gap-2.5">
-          <Mark className="size-7 text-primary" />
-          <div className="leading-tight">
+        <div className="flex min-w-0 items-center gap-2.5">
+          <Mark className="size-7 shrink-0 text-primary" />
+          <div className="min-w-0 leading-tight">
             <p className="font-display text-lg font-semibold tracking-tight">Northlight</p>
-            <p className="hidden text-xs text-muted-foreground sm:block">Local photo studio</p>
+            <SiteLinks className="mt-0.5" />
           </div>
         </div>
-        <div className="flex items-center gap-2">
-          <EngineSwitch
-            value={engine}
-            aiOn={serverAi !== false || browserKey !== null}
-            onChange={setEngine}
-          />
+        <div className="flex shrink-0 items-center gap-2">
+          <a
+            href={DONATE_URL}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="donate-btn inline-flex min-h-9 items-center gap-1.5 rounded-full bg-primary px-3 text-xs font-semibold text-primary-foreground sm:min-h-10 sm:px-4 sm:text-sm"
+          >
+            <Coffee className="size-4" />
+            Donate
+          </a>
           <Button
             variant="outline"
             size="icon"
@@ -248,8 +263,8 @@ export function StudioApp() {
         </div>
       </header>
 
-      <div className="mx-auto flex min-h-0 w-full max-w-[1400px] flex-1 flex-col overflow-y-auto lg:grid lg:grid-cols-[92px_minmax(0,1fr)_300px] lg:overflow-hidden">
-        <aside className="order-3 border-t border-border lg:order-none lg:border-r lg:border-t-0">
+      <div className="mx-auto flex min-h-0 w-full max-w-[1400px] flex-1 flex-col overflow-y-auto lg:grid lg:grid-cols-[88px_minmax(0,1fr)_340px] lg:overflow-hidden">
+        <aside className="order-3 border-t border-border lg:order-none lg:min-h-0 lg:border-r lg:border-t-0">
           <Filmstrip
             photos={photos}
             selectedId={selected?.id ?? null}
@@ -259,7 +274,7 @@ export function StudioApp() {
           />
         </aside>
 
-        <main className="relative order-1 flex min-h-[60vh] flex-1 overflow-hidden lg:order-none lg:min-h-0">
+        <main className="relative order-1 flex min-h-[52vh] flex-1 overflow-hidden lg:order-none lg:min-h-0">
           {selected ? (
             <CompareStage
               beforeSrc={selected.blobUrl}
@@ -290,85 +305,86 @@ export function StudioApp() {
           ) : null}
         </main>
 
-        <aside className="order-2 flex flex-col gap-5 border-t border-border p-4 sm:p-5 lg:order-none lg:border-l lg:border-t-0">
-          <div>
-            <p className="text-xs font-medium tracking-wide text-subtle uppercase">Finish</p>
-            <div className="mt-3 grid grid-cols-2 gap-2 lg:grid-cols-1">
-              {RECIPES.map((item) => {
-                const Icon = RECIPE_ICON[item.id];
-                const active = recipe === item.id;
-                return (
+        <aside className="order-2 flex flex-col border-t border-border lg:order-none lg:min-h-0 lg:border-l lg:border-t-0">
+          <div className="space-y-5 p-4 sm:p-5 lg:min-h-0 lg:flex-1 lg:overflow-y-auto">
+            <div>
+              <p className="text-xs font-medium tracking-wide text-subtle uppercase">Finish</p>
+              <div className="mt-3 grid grid-cols-2 gap-2 lg:grid-cols-1">
+                {RECIPES.map((item) => {
+                  const Icon = RECIPE_ICON[item.id];
+                  const active = recipe === item.id;
+                  return (
+                    <button
+                      key={item.id}
+                      type="button"
+                      onClick={() => setRecipe(item.id)}
+                      className={cn(
+                        "flex min-h-11 items-start gap-2.5 rounded-md border px-3 py-2.5 text-left transition-colors duration-[var(--motion-quick)]",
+                        active
+                          ? "border-primary bg-primary text-primary-foreground"
+                          : "border-border bg-card hover:bg-secondary",
+                      )}
+                    >
+                      <Icon className="mt-0.5 size-4 shrink-0" />
+                      <span>
+                        <span className="block text-sm font-medium">{item.label}</span>
+                        <span
+                          className={cn(
+                            "mt-0.5 block text-xs leading-snug",
+                            active ? "text-primary-foreground/75" : "text-muted-foreground",
+                          )}
+                        >
+                          {item.blurb}
+                        </span>
+                      </span>
+                    </button>
+                  );
+                })}
+              </div>
+            </div>
+
+            {recipe === "custom" ? (
+              <label className="block">
+                <span className="text-xs font-medium tracking-wide text-subtle uppercase">
+                  Instructions
+                </span>
+                <textarea
+                  value={custom}
+                  onChange={(e) => setCustom(e.target.value)}
+                  rows={4}
+                  maxLength={800}
+                  placeholder="Describe the cleanup. Identity stays locked."
+                  className="mt-2 w-full resize-none rounded-md border border-border bg-card-ink px-3 py-2.5 text-sm leading-relaxed outline-none ring-ring focus:ring-2"
+                />
+              </label>
+            ) : null}
+          </div>
+
+          <div className="shrink-0 space-y-3 border-t border-border bg-background p-4 sm:p-5">
+            <div className="flex items-center justify-between gap-3">
+              <p className="text-xs font-medium tracking-wide text-subtle uppercase">Output</p>
+              <div className="flex rounded-full border border-border bg-card p-0.5">
+                {(["1k", "2k"] as const).map((res) => (
                   <button
-                    key={item.id}
+                    key={res}
                     type="button"
-                    onClick={() => setRecipe(item.id)}
+                    onClick={() => setResolution(res)}
                     className={cn(
-                      "flex min-h-11 items-start gap-2.5 rounded-md border px-3 py-2.5 text-left transition-colors duration-[var(--motion-quick)]",
-                      active
-                        ? "border-primary bg-primary text-primary-foreground"
-                        : "border-border bg-card hover:bg-secondary",
+                      "min-h-8 rounded-full px-3 text-xs font-medium",
+                      resolution === res
+                        ? "bg-primary text-primary-foreground"
+                        : "text-muted-foreground",
                     )}
                   >
-                    <Icon className="mt-0.5 size-4 shrink-0" />
-                    <span>
-                      <span className="block text-sm font-medium">{item.label}</span>
-                      <span
-                        className={cn(
-                          "mt-0.5 block text-xs leading-snug",
-                          active ? "text-primary-foreground/75" : "text-muted-foreground",
-                        )}
-                      >
-                        {item.blurb}
-                      </span>
-                    </span>
+                    {res === "1k" ? "Fast 1K" : "Print 2K"}
                   </button>
-                );
-              })}
+                ))}
+              </div>
             </div>
-          </div>
-
-          {recipe === "custom" ? (
-            <label className="block">
-              <span className="text-xs font-medium tracking-wide text-subtle uppercase">
-                Instructions
-              </span>
-              <textarea
-                value={custom}
-                onChange={(e) => setCustom(e.target.value)}
-                rows={4}
-                maxLength={800}
-                placeholder="Describe the cleanup. Identity stays locked."
-                className="mt-2 w-full resize-none rounded-md border border-border bg-card-ink px-3 py-2.5 text-sm leading-relaxed outline-none ring-ring focus:ring-2"
-              />
-            </label>
-          ) : null}
-
-          <div className="flex items-center justify-between gap-3">
-            <p className="text-xs font-medium tracking-wide text-subtle uppercase">Output</p>
-            <div className="flex rounded-full border border-border bg-card p-0.5">
-              {(["1k", "2k"] as const).map((res) => (
-                <button
-                  key={res}
-                  type="button"
-                  onClick={() => setResolution(res)}
-                  className={cn(
-                    "min-h-8 rounded-full px-3 text-xs font-medium",
-                    resolution === res
-                      ? "bg-primary text-primary-foreground"
-                      : "text-muted-foreground",
-                  )}
-                >
-                  {res === "1k" ? "Fast 1K" : "Print 2K"}
-                </button>
-              ))}
-            </div>
-          </div>
-
-          <div className="mt-auto flex flex-col gap-2">
             <Button
               size="lg"
-              className="w-full"
-              disabled={!selected || working}
+              className="w-full max-lg:hidden"
+              disabled={!canFinish}
               onClick={() => void finishSelected()}
             >
               {working ? (
@@ -376,12 +392,12 @@ export function StudioApp() {
               ) : (
                 <Check className="size-4" />
               )}
-              Finish photo
+              Finish · {recipeMeta.label}
             </Button>
             <div className="grid grid-cols-2 gap-2">
               <Button
                 variant="outline"
-                disabled={!selected || working || photos.length < 2}
+                disabled={!canFinish || photos.length < 2}
                 onClick={() => void finishAll()}
               >
                 Finish all
@@ -398,14 +414,15 @@ export function StudioApp() {
             {selected?.resultUrl ? (
               <Button
                 variant="ghost"
+                className="w-full"
                 onClick={() => selected && void downloadPhoto(selected, false)}
               >
                 Download HQ
               </Button>
             ) : null}
-            <p className="pt-1 text-xs leading-relaxed text-muted-foreground">
-              Photos stay in this browser. Studio AI sends a copy only when you press Finish. Hold
-              Space to peek the original.
+            <p className="text-xs leading-relaxed text-muted-foreground">
+              This app does not keep your photos. Images you finish are processed per{" "}
+              <XaiPolicyLink />. Hold Space to peek the original.
             </p>
           </div>
         </aside>
@@ -427,7 +444,7 @@ export function StudioApp() {
         <Button
           size="lg"
           className="w-full"
-          disabled={!selected || working}
+          disabled={!canFinish}
           onClick={() => void finishSelected()}
         >
           {working ? (
@@ -435,7 +452,7 @@ export function StudioApp() {
           ) : (
             <Check className="size-4" />
           )}
-          Finish photo
+          Finish · {recipeMeta.label}
         </Button>
       </div>
 
@@ -452,42 +469,6 @@ export function StudioApp() {
 function isTyping(e: KeyboardEvent) {
   const t = e.target as HTMLElement | null;
   return Boolean(t && (t.tagName === "TEXTAREA" || t.tagName === "INPUT" || t.isContentEditable));
-}
-
-function EngineSwitch({
-  value,
-  aiOn,
-  onChange,
-}: {
-  value: Engine;
-  aiOn: boolean;
-  onChange: (v: Engine) => void;
-}) {
-  return (
-    <div className="flex rounded-full border border-border bg-card p-0.5">
-      <button
-        type="button"
-        className={cn(
-          "min-h-9 rounded-full px-3 text-xs font-medium sm:px-4 sm:text-sm",
-          value === "local" ? "bg-primary text-primary-foreground" : "text-muted-foreground",
-        )}
-        onClick={() => onChange("local")}
-      >
-        On device
-      </button>
-      <button
-        type="button"
-        disabled={!aiOn}
-        className={cn(
-          "min-h-9 rounded-full px-3 text-xs font-medium sm:px-4 sm:text-sm",
-          value === "ai" ? "bg-primary text-primary-foreground" : "text-muted-foreground",
-        )}
-        onClick={() => aiOn && onChange("ai")}
-      >
-        Studio AI
-      </button>
-    </div>
-  );
 }
 
 function Filmstrip({
@@ -554,6 +535,41 @@ function Filmstrip({
   );
 }
 
+function SiteLinks({ className }: { className?: string }) {
+  return (
+    <p className={cn("flex flex-wrap items-center gap-x-1.5 text-xs text-muted-foreground", className)}>
+      {SITE_LINKS.map((site, i) => (
+        <span key={site.href} className="inline-flex items-center gap-x-1.5">
+          {i > 0 ? <span aria-hidden="true">·</span> : null}
+          <a
+            href={site.href}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="underline-offset-2 hover:text-foreground hover:underline"
+            onClick={(e) => e.stopPropagation()}
+          >
+            {site.label}
+          </a>
+        </span>
+      ))}
+    </p>
+  );
+}
+
+function XaiPolicyLink() {
+  return (
+    <a
+      href={XAI_PRIVACY_POLICY}
+      target="_blank"
+      rel="noopener noreferrer"
+      className="underline underline-offset-2 hover:text-foreground"
+      onClick={(e) => e.stopPropagation()}
+    >
+      xAI&rsquo;s privacy policy
+    </a>
+  );
+}
+
 function DropEmpty({
   dragOver,
   onBrowse,
@@ -567,7 +583,7 @@ function DropEmpty({
 }) {
   return (
     <div
-      className="flex h-full min-h-[52vh] items-center justify-center p-4 sm:p-8"
+      className="flex size-full min-h-[52vh] items-stretch p-3 sm:p-4 lg:p-5"
       onDragOver={(e) => {
         e.preventDefault();
         onDragOver(true);
@@ -579,28 +595,37 @@ function DropEmpty({
         if (e.dataTransfer.files.length) onDrop(e.dataTransfer.files);
       }}
     >
-      <button
-        type="button"
-        onClick={onBrowse}
+      <div
         className={cn(
-          "stagger-in flex w-full max-w-lg flex-col items-center gap-4 rounded-xl border border-dashed px-6 py-16 text-center transition-colors duration-[var(--motion-fast)]",
-          dragOver ? "border-primary bg-secondary" : "border-border bg-card hover:bg-secondary/70",
+          "stagger-in flex h-full min-h-[44vh] w-full flex-col items-center justify-center rounded-xl border border-dashed text-center transition-colors duration-[var(--motion-fast)] lg:min-h-0",
+          dragOver ? "border-primary bg-secondary" : "border-border bg-card",
         )}
       >
-        <Mark className="size-12 text-primary" />
-        <div>
-          <h1 className="font-display text-3xl font-semibold tracking-tight sm:text-4xl">
-            Drop proofs here
-          </h1>
-          <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-            Yearbook scans, watermarked previews, everyday portraits. Finish on this device or send
-            to Studio AI. Nothing is stored on a server.
-          </p>
+        <div className="flex w-full flex-1 flex-col items-center justify-center">
+          <button
+            type="button"
+            onClick={onBrowse}
+            className="flex w-full flex-col items-center justify-center gap-4 px-6 py-12 hover:bg-secondary/40 lg:py-16"
+          >
+            <Mark className="size-12 text-primary" />
+            <div className="max-w-md">
+              <h1 className="font-display text-3xl font-semibold tracking-tight sm:text-4xl">
+                Drop proofs here
+              </h1>
+              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
+                Yearbook scans, watermarked previews, everyday portraits. Finish with Studio AI.
+              </p>
+            </div>
+            <span className="inline-flex min-h-11 items-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground">
+              Choose photos
+            </span>
+          </button>
+          <SiteLinks className="px-6 pb-4 justify-center text-sm font-semibold text-foreground" />
         </div>
-        <span className="inline-flex min-h-11 items-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground">
-          Choose photos
-        </span>
-      </button>
+        <p className="max-w-md px-6 pb-6 text-xs leading-relaxed text-muted-foreground sm:text-sm">
+          Images you finish are processed per <XaiPolicyLink />.
+        </p>
+      </div>
     </div>
   );
 }

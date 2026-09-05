@@ -4,7 +4,7 @@ import { z } from "zod";
 const Input = z.object({
   imageDataUrl: z.string().min(32).max(8_000_000),
   prompt: z.string().min(8).max(2000),
-  aspectRatio: z.string().max(12),
+  aspectRatio: z.string().max(12).default("auto"),
   resolution: z.enum(["1k", "2k"]),
   // Browser-supplied xAI key (Settings). Used for this request only — never
   // persisted server-side — and wins over the deployment's XAI_API_KEY.
@@ -42,9 +42,11 @@ async function callEdits(
       model,
       prompt: data.prompt,
       image: { url: data.imageDataUrl, type: "image_url" },
-      aspect_ratio: data.aspectRatio,
+      // auto keeps the source crop; snapping to a nearby ratio can crop the subject.
+      aspect_ratio: data.aspectRatio || "auto",
       resolution: data.resolution,
-      quality: data.resolution === "2k" ? "medium" : "low",
+      // Image edits default to medium; low is for cheap text-to-image drafts.
+      quality: "medium",
       n: 1,
       response_format: "b64_json",
     }),

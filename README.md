@@ -19,25 +19,17 @@ Open the printed local URL. Default port is **8080**.
 2. Pick a finish:
    - **Proof clean** — watermarks off, grey yearbook backdrop
    - **Watermarks only** — logos/text off, keep the original background
-   - **HQ enhance** — color, light, sharpness (runs in the browser)
+   - **HQ enhance** — color, light, sharpness
    - **Studio grey / white** — seamless paper backdrop
    - **Custom** — your instructions, identity locked
-3. Choose **On device** (never leaves the browser) or **Studio AI**.
-4. Press **Finish photo**. Drag the slider to compare. Hold **Space** for the original.
-5. Download **HQ** or **Print JPG** (2×).
+3. Press **Finish photo**. Drag the slider to compare. Hold **Space** for the original.
+4. Download **HQ** or **Print JPG** (2×).
 
-## Engines
-
-| Engine    | What it does                        | Leaves the device          |
-| --------- | ----------------------------------- | -------------------------- |
-| On device | Contrast, color, sharpen            | No                         |
-| Studio AI | Watermark removal, backdrop replace | Only when you press Finish |
-
-Studio AI calls `https://api.x.ai/v1/images/edits` with `grok-imagine-image-2.0`. Set `XAI_API_KEY` in `.env`. Without a key, the app stays on-device.
+Studio AI calls `https://api.x.ai/v1/images/edits` with `grok-imagine-image-2.0`. Set `XAI_API_KEY` in `.env`. Without a key, add one in **Settings**.
 
 You can also bring your own key in the app: open **Settings** (top right) and paste it. It is stored AES-256-GCM encrypted in this browser only, takes precedence over the server key, and can be removed again from the same dialog.
 
-Photos are not stored on a server.
+This app does not persist photos. Images you finish are processed per [xAI's privacy policy](https://x.ai/legal/privacy-policy).
 
 ## Scripts
 

@@ -20,7 +20,7 @@ export const Route = createRootRoute({
       {
         name: "description",
         content:
-          "Finish portraits on this device. Remove watermarks, clean studio backdrops, export print-ready HQ.",
+          "Finish portraits with Studio AI. Remove watermarks, clean studio backdrops, export print-ready HQ.",
       },
       { name: "theme-color", content: "#efeae3" },
     ],
