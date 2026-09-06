@@ -1,10 +1,15 @@
 import { createServerFn } from "@tanstack/react-start";
 import { z } from "zod";
+import { buildEditBody } from "./edit-request";
+
+const ImageDataUrl = z.string().min(32).max(8_000_000);
 
 const Input = z.object({
-  imageDataUrl: z.string().min(32).max(8_000_000),
+  imageDataUrl: ImageDataUrl,
+  lookImageDataUrl: ImageDataUrl.optional(),
+  backdropImageDataUrl: ImageDataUrl.optional(),
   prompt: z.string().min(8).max(2000),
-  aspectRatio: z.string().max(12).default("auto"),
+  aspectRatio: z.enum(["auto", "1:1", "3:4", "2:3"]).default("auto"),
   resolution: z.enum(["1k", "2k"]),
   // Browser-supplied xAI key (Settings). Used for this request only — never
   // persisted server-side — and wins over the deployment's XAI_API_KEY.
@@ -38,18 +43,7 @@ async function callEdits(
       Authorization: `Bearer ${apiKey}`,
     },
     signal,
-    body: JSON.stringify({
-      model,
-      prompt: data.prompt,
-      image: { url: data.imageDataUrl, type: "image_url" },
-      // auto keeps the source crop; snapping to a nearby ratio can crop the subject.
-      aspect_ratio: data.aspectRatio || "auto",
-      resolution: data.resolution,
-      // Image edits default to medium; low is for cheap text-to-image drafts.
-      quality: "medium",
-      n: 1,
-      response_format: "b64_json",
-    }),
+    body: JSON.stringify(buildEditBody(model, data)),
   });
 
   if (!res.ok) {

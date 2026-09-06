@@ -1,14 +1,18 @@
 import {
+  Briefcase,
   Check,
   Coffee,
   Download,
   Eraser,
   ImageIcon,
   LoaderCircle,
+  Pin,
   Settings,
+  Sparkles,
   SunMedium,
   Trash2,
   Upload,
+  UserRound,
 } from "lucide-react";
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
@@ -19,7 +23,18 @@ import { Button } from "@/components/ui/button";
 import { finishPhoto, studioStatus } from "@/lib/finish";
 import { dataUrlToPrint, downloadDataUrl, fileToLoadedPhoto, resizeDataUrl } from "@/lib/image-io";
 import { loadBrowserApiKey } from "@/lib/key-store";
-import { buildPrompt, recipeById, RECIPES, type RecipeId } from "@/lib/presets";
+import {
+  buildPrompt,
+  CROPS,
+  CUSTOM_MAX,
+  nextCropForRecipe,
+  PROMPT_MAX,
+  recipeById,
+  RECIPES,
+  type CropId,
+  type RecipeId,
+  type ToneId,
+} from "@/lib/presets";
 import { cn } from "@/lib/utils";
 
 const XAI_PRIVACY_POLICY = "https://x.ai/legal/privacy-policy";
@@ -44,12 +59,21 @@ type Photo = {
   error?: string;
 };
 
+type Backdrop = {
+  name: string;
+  blobUrl: string;
+  dataUrl: string;
+};
+
 const RECIPE_ICON: Record<RecipeId, typeof Eraser> = {
   proof: Eraser,
   watermark: Eraser,
   enhance: SunMedium,
+  cleanup: Sparkles,
   grey: ImageIcon,
   white: ImageIcon,
+  id: UserRound,
+  linkedin: Briefcase,
   custom: ImageIcon,
 };
 
@@ -58,6 +82,12 @@ export function StudioApp() {
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [recipe, setRecipe] = useState<RecipeId>("proof");
   const [custom, setCustom] = useState("");
+  const [crop, setCrop] = useState<CropId>("auto");
+  const [tone, setTone] = useState<ToneId>("color");
+  const [retouch, setRetouch] = useState(false);
+  const [lookId, setLookId] = useState<string | null>(null);
+  const [backdrop, setBackdrop] = useState<Backdrop | null>(null);
+  const [backdropOver, setBackdropOver] = useState(false);
   const [resolution, setResolution] = useState<"1k" | "2k">("2k");
   const [serverAi, setServerAi] = useState<boolean | null>(null);
   const [browserKey, setBrowserKey] = useState<string | null>(null);
@@ -65,6 +95,7 @@ export function StudioApp() {
   const [peek, setPeek] = useState(false);
   const [dragOver, setDragOver] = useState(false);
   const inputRef = useRef<HTMLInputElement>(null);
+  const backdropInputRef = useRef<HTMLInputElement>(null);
   const working = photos.some((p) => p.status === "working");
 
   const selected = photos.find((p) => p.id === selectedId) ?? photos[0];
@@ -157,6 +188,31 @@ export function StudioApp() {
   const customReady = recipe !== "custom" || custom.trim().length > 0;
   const canFinish = Boolean(selected) && !working && aiReady && customReady;
 
+  function pickRecipe(id: RecipeId) {
+    if (id === recipe) return;
+    setCrop((current) => nextCropForRecipe(id, recipe, current));
+    setRecipe(id);
+  }
+
+  const setBackdropFile = useCallback(async (file: File) => {
+    try {
+      const loaded = await fileToLoadedPhoto(file);
+      setBackdrop((prev) => {
+        if (prev) URL.revokeObjectURL(prev.blobUrl);
+        return { name: loaded.name, blobUrl: loaded.blobUrl, dataUrl: loaded.dataUrl };
+      });
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : "Could not read backdrop.");
+    }
+  }, []);
+
+  const clearBackdrop = useCallback(() => {
+    setBackdrop((prev) => {
+      if (prev) URL.revokeObjectURL(prev.blobUrl);
+      return null;
+    });
+  }, []);
+
   async function finishOne(photo: Photo) {
     if (!aiReady) {
       toast.error("Add an xAI key in Settings to finish photos.");
@@ -166,6 +222,11 @@ export function StudioApp() {
     const activeRecipe = recipe;
     const activeCustom = custom;
     const activeResolution = resolution;
+    const activeCrop = crop;
+    const activeTone = tone;
+    const activeRetouch = retouch;
+    const activeLookId = lookId;
+    const activeBackdrop = backdrop;
     if (activeRecipe === "custom" && !activeCustom.trim()) {
       toast.error("Add instructions for Custom before finishing.");
       return;
@@ -176,13 +237,35 @@ export function StudioApp() {
     try {
       const maxEdge = activeResolution === "2k" ? 1536 : 1280;
       const payload = await resizeDataUrl(photo.previewUrl, maxEdge, 0.84);
+      const lookPhoto =
+        activeLookId && activeLookId !== photo.id
+          ? photos.find((p) => p.id === activeLookId && p.resultUrl)
+          : undefined;
+      const lookImageDataUrl = lookPhoto?.resultUrl
+        ? await resizeDataUrl(lookPhoto.resultUrl, 1280, 0.8)
+        : undefined;
+      const backdropImageDataUrl = activeBackdrop
+        ? await resizeDataUrl(activeBackdrop.dataUrl, 1280, 0.8)
+        : undefined;
+      const prompt = buildPrompt(activeRecipe, activeCustom, {
+        tone: activeTone,
+        retouch: activeRetouch,
+        crop: activeCrop,
+        hasLook: Boolean(lookImageDataUrl),
+        hasBackdrop: Boolean(backdropImageDataUrl),
+      });
+      if (prompt.length > PROMPT_MAX) {
+        throw new Error("Instructions are too long with look, backdrop, and retouch. Shorten Custom.");
+      }
       const out = await finishPhoto({
         data: {
           imageDataUrl: payload,
-          prompt: buildPrompt(activeRecipe, activeCustom),
-          aspectRatio: "auto",
+          prompt,
+          aspectRatio: activeCrop,
           resolution: activeResolution,
           apiKey: browserKey ?? undefined,
+          ...(lookImageDataUrl ? { lookImageDataUrl } : {}),
+          ...(backdropImageDataUrl ? { backdropImageDataUrl } : {}),
         },
       });
       if (!out.ok) throw new Error(out.error);
@@ -230,6 +313,7 @@ export function StudioApp() {
       });
       return next;
     });
+    setLookId((cur) => (cur === id ? null : cur));
   }
 
   return (
@@ -268,8 +352,10 @@ export function StudioApp() {
           <Filmstrip
             photos={photos}
             selectedId={selected?.id ?? null}
+            lookId={lookId}
             onSelect={setSelectedId}
             onRemove={removePhoto}
+            onToggleLook={(id) => setLookId((cur) => (cur === id ? null : id))}
             onAdd={() => inputRef.current?.click()}
           />
         </aside>
@@ -309,7 +395,7 @@ export function StudioApp() {
           <div className="space-y-5 p-4 sm:p-5 lg:min-h-0 lg:flex-1 lg:overflow-y-auto">
             <div>
               <p className="text-xs font-medium tracking-wide text-subtle uppercase">Finish</p>
-              <div className="mt-3 grid grid-cols-2 gap-2 lg:grid-cols-1">
+              <div className="mt-3 grid grid-cols-2 gap-2">
                 {RECIPES.map((item) => {
                   const Icon = RECIPE_ICON[item.id];
                   const active = recipe === item.id;
@@ -317,9 +403,9 @@ export function StudioApp() {
                     <button
                       key={item.id}
                       type="button"
-                      onClick={() => setRecipe(item.id)}
+                      onClick={() => pickRecipe(item.id)}
                       className={cn(
-                        "flex min-h-11 items-start gap-2.5 rounded-md border px-3 py-2.5 text-left transition-colors duration-[var(--motion-quick)]",
+                        "flex min-h-11 items-start gap-2 rounded-md border px-2.5 py-2 text-left transition-colors duration-[var(--motion-quick)]",
                         active
                           ? "border-primary bg-primary text-primary-foreground"
                           : "border-border bg-card hover:bg-secondary",
@@ -352,12 +438,51 @@ export function StudioApp() {
                   value={custom}
                   onChange={(e) => setCustom(e.target.value)}
                   rows={4}
-                  maxLength={800}
+                  maxLength={CUSTOM_MAX}
                   placeholder="Describe the cleanup. Identity stays locked."
                   className="mt-2 w-full resize-none rounded-md border border-border bg-card-ink px-3 py-2.5 text-sm leading-relaxed outline-none ring-ring focus:ring-2"
                 />
               </label>
             ) : null}
+
+            <Segment
+              label="Crop"
+              value={crop}
+              options={CROPS}
+              onChange={setCrop}
+            />
+            <Segment
+              label="Tone"
+              value={tone}
+              options={[
+                { id: "color", label: "Color" },
+                { id: "bw", label: "B&W" },
+              ]}
+              onChange={setTone}
+            />
+            <Segment
+              label="Retouch"
+              value={retouch ? "on" : "off"}
+              options={[
+                { id: "off", label: "Off" },
+                { id: "on", label: "Gentle" },
+              ]}
+              onChange={(id) => setRetouch(id === "on")}
+            />
+
+            <LookPicker
+              photos={photos}
+              lookId={lookId}
+              onPick={setLookId}
+            />
+            <BackdropPicker
+              backdrop={backdrop}
+              dragOver={backdropOver}
+              onBrowse={() => backdropInputRef.current?.click()}
+              onDragOver={setBackdropOver}
+              onDrop={(file) => void setBackdropFile(file)}
+              onClear={clearBackdrop}
+            />
           </div>
 
           <div className="shrink-0 space-y-3 border-t border-border bg-background p-4 sm:p-5">
@@ -439,6 +564,17 @@ export function StudioApp() {
           e.target.value = "";
         }}
       />
+      <input
+        ref={backdropInputRef}
+        type="file"
+        accept="image/jpeg,image/png,image/webp,image/jpg"
+        className="sr-only"
+        onChange={(e) => {
+          const file = e.target.files?.[0];
+          if (file) void setBackdropFile(file);
+          e.target.value = "";
+        }}
+      />
 
       <div className="sticky bottom-0 z-20 border-t border-border bg-background/95 p-3 lg:hidden">
         <Button
@@ -471,17 +607,180 @@ function isTyping(e: KeyboardEvent) {
   return Boolean(t && (t.tagName === "TEXTAREA" || t.tagName === "INPUT" || t.isContentEditable));
 }
 
+function Segment<T extends string>({
+  label,
+  value,
+  options,
+  onChange,
+}: {
+  label: string;
+  value: T;
+  options: { id: T; label: string }[];
+  onChange: (id: T) => void;
+}) {
+  return (
+    <div>
+      <p className="text-xs font-medium tracking-wide text-subtle uppercase">{label}</p>
+      <div className="mt-2 flex rounded-full border border-border bg-card p-0.5">
+        {options.map((opt) => (
+          <button
+            key={opt.id}
+            type="button"
+            onClick={() => onChange(opt.id)}
+            className={cn(
+              "min-h-8 flex-1 rounded-full px-2 text-xs font-medium",
+              value === opt.id ? "bg-primary text-primary-foreground" : "text-muted-foreground",
+            )}
+          >
+            {opt.label}
+          </button>
+        ))}
+      </div>
+    </div>
+  );
+}
+
+function LookPicker({
+  photos,
+  lookId,
+  onPick,
+}: {
+  photos: Photo[];
+  lookId: string | null;
+  onPick: (id: string | null) => void;
+}) {
+  const done = photos.filter((p) => p.status === "done" && p.resultUrl);
+  return (
+    <div>
+      <p className="text-xs font-medium tracking-wide text-subtle uppercase">Match look</p>
+      {done.length === 0 ? (
+        <p className="mt-2 text-xs leading-relaxed text-muted-foreground">
+          Finish one photo, then pin it so the rest match its lighting and grade.
+        </p>
+      ) : (
+        <div className="mt-2 flex gap-2 overflow-x-auto">
+          <button
+            type="button"
+            onClick={() => onPick(null)}
+            className={cn(
+              "flex size-14 shrink-0 flex-col items-center justify-center rounded-md border text-xs",
+              lookId === null
+                ? "border-primary bg-primary text-primary-foreground"
+                : "border-border bg-card text-muted-foreground hover:bg-secondary",
+            )}
+          >
+            Off
+          </button>
+          {done.map((photo) => {
+            const active = lookId === photo.id;
+            return (
+              <button
+                key={photo.id}
+                type="button"
+                title={photo.name}
+                aria-label={`Match look of ${photo.name}`}
+                aria-pressed={active}
+                onClick={() => onPick(active ? null : photo.id)}
+                className={cn(
+                  "relative size-14 shrink-0 overflow-hidden rounded-md border",
+                  active ? "border-primary ring-2 ring-ring/40" : "border-border",
+                )}
+              >
+                <img
+                  src={photo.resultUrl}
+                  alt=""
+                  className="size-full object-cover"
+                />
+                {active ? (
+                  <span className="absolute inset-x-0 bottom-0 bg-primary/80 py-0.5 text-[10px] font-medium text-primary-foreground">
+                    Look
+                  </span>
+                ) : null}
+              </button>
+            );
+          })}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function BackdropPicker({
+  backdrop,
+  dragOver,
+  onBrowse,
+  onDragOver,
+  onDrop,
+  onClear,
+}: {
+  backdrop: Backdrop | null;
+  dragOver: boolean;
+  onBrowse: () => void;
+  onDragOver: (on: boolean) => void;
+  onDrop: (file: File) => void;
+  onClear: () => void;
+}) {
+  return (
+    <div>
+      <p className="text-xs font-medium tracking-wide text-subtle uppercase">Backdrop</p>
+      {backdrop ? (
+        <div className="relative mt-2 overflow-hidden rounded-md border border-border">
+          <img src={backdrop.blobUrl} alt={backdrop.name} className="h-20 w-full object-cover" />
+          <p className="absolute inset-x-0 bottom-0 truncate bg-primary/75 px-2 py-1 text-[10px] text-primary-foreground">
+            {backdrop.name}
+          </p>
+          <button
+            type="button"
+            aria-label="Remove backdrop"
+            onClick={onClear}
+            className="absolute top-1 right-1 grid size-6 place-items-center rounded-full bg-primary text-primary-foreground"
+          >
+            <Trash2 className="size-3" />
+          </button>
+        </div>
+      ) : (
+        <button
+          type="button"
+          onClick={onBrowse}
+          onDragOver={(e) => {
+            e.preventDefault();
+            onDragOver(true);
+          }}
+          onDragLeave={() => onDragOver(false)}
+          onDrop={(e) => {
+            e.preventDefault();
+            onDragOver(false);
+            const file = e.dataTransfer.files[0];
+            if (file) onDrop(file);
+          }}
+          className={cn(
+            "mt-2 flex min-h-16 w-full flex-col items-center justify-center gap-1 rounded-md border border-dashed px-3 py-3 text-center text-xs leading-snug transition-colors duration-[var(--motion-quick)]",
+            dragOver ? "border-primary bg-secondary" : "border-border bg-card text-muted-foreground hover:bg-secondary",
+          )}
+        >
+          <ImageIcon className="size-4" />
+          Drop studio paper, or choose a photo
+        </button>
+      )}
+    </div>
+  );
+}
+
 function Filmstrip({
   photos,
   selectedId,
+  lookId,
   onSelect,
   onRemove,
+  onToggleLook,
   onAdd,
 }: {
   photos: Photo[];
   selectedId: string | null;
+  lookId: string | null;
   onSelect: (id: string) => void;
   onRemove: (id: string) => void;
+  onToggleLook: (id: string) => void;
   onAdd: () => void;
 }) {
   return (
@@ -520,6 +819,27 @@ function Filmstrip({
             <span className="absolute top-1 left-1 grid size-4 place-items-center rounded-full bg-ok text-primary-foreground">
               <Check className="size-2.5" />
             </span>
+          ) : null}
+          {photo.status === "done" ? (
+            <button
+              type="button"
+              aria-label={
+                lookId === photo.id ? `Stop using ${photo.name} as look` : `Use ${photo.name} as look`
+              }
+              aria-pressed={lookId === photo.id}
+              onClick={(e) => {
+                e.stopPropagation();
+                onToggleLook(photo.id);
+              }}
+              className={cn(
+                "absolute bottom-1 left-1 grid size-5 place-items-center rounded-full",
+                lookId === photo.id
+                  ? "bg-ok text-primary-foreground"
+                  : "bg-primary/80 text-primary-foreground",
+              )}
+            >
+              <Pin className="size-2.5" />
+            </button>
           ) : null}
           <button
             type="button"

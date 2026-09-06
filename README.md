@@ -20,10 +20,15 @@ Open the printed local URL. Default port is **8080**.
    - **Proof clean** — watermarks off, grey yearbook backdrop
    - **Watermarks only** — logos/text off, keep the original background
    - **HQ enhance** — color, light, sharpness
+   - **Cleanup** — glasses glare, flyaways, lint, wrinkles
    - **Studio grey / white** — seamless paper backdrop
+   - **ID photo** — passport-style, white backdrop, 3:4
+   - **LinkedIn** — square studio headshot
    - **Custom** — your instructions, identity locked
-3. Press **Finish photo**. Drag the slider to compare. Hold **Space** for the original.
-4. Download **HQ** or **Print JPG** (2×).
+3. Optional: lock **crop** (Auto / 1:1 / 3:4 / 2:3), switch **B&W**, or turn on **gentle retouch**.
+4. Optional: pin a finished photo as the **look** (lighting and grade for the rest of the batch), or drop a studio-paper photo as the **backdrop**.
+5. Press **Finish photo**. Drag the slider to compare. Hold **Space** for the original.
+6. Download **HQ** or **Print JPG** (2×).
 
 Studio AI calls `https://api.x.ai/v1/images/edits` with `grok-imagine-image-2.0`. Set `XAI_API_KEY` in `.env`. Without a key, add one in **Settings**.
 
