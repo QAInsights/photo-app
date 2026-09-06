@@ -1,10 +1,21 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { cn } from "@/lib/utils";
+
+export type ImageSource = { type: string; srcSet: string };
 
 type Props = {
   beforeSrc: string;
   afterSrc?: string;
   peekOriginal: boolean;
   alt: string;
+  className?: string;
+  fill?: boolean;
+  width?: number;
+  height?: number;
+  sizes?: string;
+  beforeSources?: ImageSource[];
+  afterSources?: ImageSource[];
+  lcp?: boolean;
 };
 
 export function CompareStage({
@@ -12,6 +23,14 @@ export function CompareStage({
   afterSrc,
   peekOriginal,
   alt,
+  className,
+  fill = false,
+  width,
+  height,
+  sizes,
+  beforeSources,
+  afterSources,
+  lcp = false,
 }: Props) {
   const [split, setSplit] = useState(52);
   const dragging = useRef(false);
@@ -42,16 +61,33 @@ export function CompareStage({
   }, [onMove]);
 
   const showCompare = Boolean(afterSrc) && !peekOriginal;
-  const baseSrc = showCompare ? afterSrc : beforeSrc;
+  const baseSrc = showCompare ? afterSrc! : beforeSrc;
+  const baseSources = showCompare ? afterSources : beforeSources;
+
+  function nudge(delta: number) {
+    setSplit((current) => Math.min(96, Math.max(4, current + delta)));
+  }
 
   return (
-    <div className="flex h-full w-full items-center justify-center p-4 sm:p-6">
-      <div ref={frame} className="relative max-h-full max-w-full">
-        <img
+    <div
+      className={cn(
+        "flex h-full w-full items-center justify-center p-4 sm:p-6",
+        className,
+      )}
+    >
+      <div
+        ref={frame}
+        className={cn("relative max-h-full max-w-full", fill && "h-full w-full")}
+      >
+        <StageImage
           src={baseSrc}
+          sources={baseSources}
           alt={alt}
-          className="block max-h-full w-auto max-w-full rounded-lg bg-card-ink object-contain shadow-print"
-          draggable={false}
+          width={width}
+          height={height}
+          sizes={sizes}
+          fetchPriority={lcp ? "high" : undefined}
+          fill={fill}
         />
         {showCompare ? (
           <>
@@ -59,22 +95,45 @@ export function CompareStage({
               className="absolute inset-0 overflow-hidden rounded-lg"
               style={{ clipPath: `inset(0 ${100 - split}% 0 0)` }}
             >
-              <img
+              <StageImage
                 src={beforeSrc}
+                sources={beforeSources}
                 alt=""
-                className="size-full object-contain"
-                draggable={false}
+                width={width}
+                height={height}
+                sizes={sizes}
+                fill
               />
             </div>
             <button
               type="button"
-              aria-label="Drag to compare before and after"
+              role="slider"
+              aria-label="Compare before and after"
+              aria-valuemin={4}
+              aria-valuemax={96}
+              aria-valuenow={Math.round(split)}
+              aria-orientation="horizontal"
               className="absolute top-0 bottom-0 z-10 w-8 -translate-x-1/2 cursor-ew-resize touch-none"
               style={{ left: `${split}%` }}
               onPointerDown={(e) => {
                 dragging.current = true;
                 (e.target as HTMLElement).setPointerCapture(e.pointerId);
                 onMove(e.clientX);
+              }}
+              onKeyDown={(e) => {
+                if (e.key === "ArrowLeft") {
+                  e.preventDefault();
+                  nudge(-4);
+                } else if (e.key === "ArrowRight") {
+                  e.preventDefault();
+                  nudge(4);
+                } else if (e.key === "Home") {
+                  e.preventDefault();
+                  setSplit(4);
+                } else if (e.key === "End") {
+                  e.preventDefault();
+                  setSplit(96);
+                }
               }}
             >
               <span className="absolute inset-y-0 left-1/2 w-px -translate-x-1/2 bg-primary-foreground/90 mix-blend-difference" />
@@ -95,5 +154,56 @@ export function CompareStage({
         ) : null}
       </div>
     </div>
+  );
+}
+
+function StageImage({
+  src,
+  sources,
+  alt,
+  width,
+  height,
+  sizes,
+  fetchPriority,
+  fill,
+}: {
+  src: string;
+  sources?: ImageSource[];
+  alt: string;
+  width?: number;
+  height?: number;
+  sizes?: string;
+  fetchPriority?: "high" | "low";
+  fill?: boolean;
+}) {
+  const imgClass = cn(
+    "block rounded-lg bg-card-ink object-contain shadow-print",
+    fill ? "size-full" : "max-h-full w-auto max-w-full",
+  );
+  const img = (
+    <img
+      src={src}
+      alt={alt}
+      width={width}
+      height={height}
+      sizes={sizes}
+      fetchPriority={fetchPriority}
+      className={imgClass}
+      draggable={false}
+    />
+  );
+  if (!sources?.length) return img;
+  return (
+    <picture className={fill ? "contents" : undefined}>
+      {sources.map((source) => (
+        <source
+          key={source.type}
+          type={source.type}
+          srcSet={source.srcSet}
+          sizes={sizes}
+        />
+      ))}
+      {img}
+    </picture>
   );
 }

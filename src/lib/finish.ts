@@ -11,8 +11,8 @@ const Input = z.object({
   prompt: z.string().min(8).max(2000),
   aspectRatio: z.enum(["auto", "1:1", "3:4", "2:3"]).default("auto"),
   resolution: z.enum(["1k", "2k"]),
-  // Browser-supplied xAI key (Settings). Used for this request only — never
-  // persisted server-side — and wins over the deployment's XAI_API_KEY.
+  // Browser-supplied xAI key (Settings). Used for this request only, never
+  // persisted server-side, and wins over the deployment's XAI_API_KEY.
   apiKey: z.string().trim().max(256).optional(),
 });
 

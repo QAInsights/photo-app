@@ -63,7 +63,7 @@ export function installPreviewHostBridge(options: PreviewHostBridgeOptions): () 
   if (typeof window === "undefined" || window.self === window.top) {
     return () => {};
   }
-  // Always embedded here — top-level windows returned early above.
+  // Always embedded here. Top-level windows returned early above.
   const parentOrigin = resolveParentEmbedderOrigin(
     false,
     document.referrer,

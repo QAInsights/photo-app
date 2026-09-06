@@ -3,8 +3,8 @@
 /**
  * Deploy-time migration applier (`npm run build` runs this after `vite build`).
  *
- * Reads `migrations/` with `readdir` — non-recursive, per the contract in
- * `migration-plan.mjs` — and applies files the database has not seen, keyed
+ * Reads `migrations/` with `readdir` (non-recursive, per the contract in
+ * `migration-plan.mjs`) and applies files the database has not seen, keyed
  * by basename in `_migrations`. No-op when the app config keeps the database
  * off (`deploy.database: false`) or the app has no migrations.
  */
@@ -19,11 +19,11 @@ const MIGRATIONS_DIR = join(root, "migrations");
 
 const config = readAppConfig();
 if (config.deploy && config.deploy.database === false) {
-  console.log("[migrate] database disabled by app config — nothing to apply");
+  console.log("[migrate] database disabled by app config: nothing to apply");
   process.exit(0);
 }
 if (!existsSync(MIGRATIONS_DIR)) {
-  console.log("[migrate] no migrations/ directory — nothing to apply");
+  console.log("[migrate] no migrations/ directory: nothing to apply");
   process.exit(0);
 }
 

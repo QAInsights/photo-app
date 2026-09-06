@@ -5,7 +5,7 @@
  * `scripts/check-auth-invariant.mjs` reads it to compare the live dev server's
  * `VITE_AUTH_ENABLED` against the value the next build will resolve. The
  * config is loaded even when Vite is started outside `scripts/with-app-env.mjs`
- * — the case that check exists to catch. These are the same values Vite inlines
+ * (the case that check exists to catch). These are the same values Vite inlines
  * into the client bundle, and `apply: "serve"` keeps the route out of deployed
  * apps.
  */

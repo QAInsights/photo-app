@@ -5,7 +5,7 @@
  * `node scripts/with-app-env.mjs vite build`.
  *
  * Layers, highest priority first: the real environment (never overwritten),
- * `.grok/app-env.json` string entries (the app-builder's config — flags like
+ * `.grok/app-env.json` string entries (the app-builder's config: flags like
  * `VITE_AUTH_ENABLED` must not drift from what the host resolved),
  * `.env.local`, then `.env`. Values land in `process.env`, which Vite
  * respects when it inlines `VITE_*`, so a wrapped build resolves the same

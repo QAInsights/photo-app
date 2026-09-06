@@ -1,7 +1,7 @@
 export const SITE_URL = "https://photo.dosa.dev";
 export const SITE_NAME = "Northlight";
 export const SITE_SHORT_NAME = "Northlight";
-export const SITE_TITLE = "Northlight — AI portrait studio";
+export const SITE_TITLE = "Northlight: AI portrait studio";
 export const SITE_TAGLINE = "Finish portraits with Studio AI.";
 export const SITE_DESCRIPTION =
   "Finish portraits in the browser. Strip watermarks, clean studio backdrops, and export print-ready HQ or 2× JPG. Identity stays locked. Photos are not stored.";

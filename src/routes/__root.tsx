@@ -6,6 +6,7 @@ import {
 } from "@tanstack/react-router";
 import { AuthProvider } from "@/lib/auth/provider";
 import { PreviewHostBridge } from "@/components/preview-host-bridge";
+import { SAMPLE_LCP_PRELOAD } from "@/lib/sample";
 import {
   jsonLd,
   SITE_DESCRIPTION,
@@ -23,7 +24,7 @@ export const Route = createRootRoute({
   head: () => ({
     meta: [
       { charSet: "utf-8" },
-      { name: "viewport", content: "width=device-width, initial-scale=1" },
+      { name: "viewport", content: "width=device-width, initial-scale=1.0" },
       { title: SITE_TITLE },
       { "script:ld+json": jsonLd },
       { name: "description", content: SITE_DESCRIPTION },
@@ -66,15 +67,26 @@ export const Route = createRootRoute({
       { rel: "alternate", type: "text/markdown", href: "/about.md", title: "Markdown" },
       { rel: "alternate", type: "text/plain", href: "/llms.txt", title: "llms.txt" },
       { rel: "stylesheet", href: appCss },
-      { rel: "preconnect", href: "https://fonts.googleapis.com" },
       {
-        rel: "preconnect",
-        href: "https://fonts.gstatic.com",
+        rel: "preload",
+        href: "/fonts/outfit-latin.woff2",
+        as: "font",
+        type: "font/woff2",
         crossOrigin: "anonymous",
       },
       {
-        rel: "stylesheet",
-        href: "https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,500;9..144,600;9..144,700&family=Outfit:wght@400;500;600;700&display=swap",
+        rel: "preload",
+        href: "/fonts/fraunces-latin.woff2",
+        as: "font",
+        type: "font/woff2",
+        crossOrigin: "anonymous",
+      },
+      {
+        rel: "preload",
+        href: SAMPLE_LCP_PRELOAD,
+        as: "image",
+        type: "image/avif",
+        fetchPriority: "high",
       },
     ],
   }),

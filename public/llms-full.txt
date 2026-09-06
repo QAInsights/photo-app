@@ -11,14 +11,14 @@ Source: https://github.com/QAInsights/photo-app
 
 ## Finishes
 
-- Proof clean — watermarks off, grey yearbook backdrop.
-- Watermarks only — logos and text off, original backdrop kept.
-- HQ enhance — color, light, sharpness. No structural changes.
-- Cleanup — glasses glare, flyaways, lint, wrinkles. Subject unchanged.
-- Studio grey / white — seamless paper backdrop. Subject unchanged.
-- ID photo — passport-style, white backdrop, 3:4 crop.
-- LinkedIn — square studio headshot, grey paper.
-- Custom — your instructions, identity locked.
+- Proof clean: watermarks off, grey yearbook backdrop.
+- Watermarks only: logos and text off, original backdrop kept.
+- HQ enhance: color, light, sharpness. No structural changes.
+- Cleanup: glasses glare, flyaways, lint, wrinkles. Subject unchanged.
+- Studio grey / white: seamless paper backdrop. Subject unchanged.
+- ID photo: passport-style, white backdrop, 3:4 crop.
+- LinkedIn: square studio headshot, grey paper.
+- Custom: your instructions, identity locked.
 
 ## Optional modifiers
 

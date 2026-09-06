@@ -10,7 +10,7 @@
   --color-card-ink: #fffdf9;
   --color-muted: #ddd6cc;
   --color-muted-foreground: #6b6560;
-  --color-subtle: #8a837c;
+  --color-subtle: #5f5a56;
   --color-border: #d4cdc3;
   --color-primary: #24302c;
   --color-primary-foreground: #f7f3ed;
@@ -28,6 +28,28 @@
   --shadow-print: 0 18px 40px -24px rgb(28 25 22 / 0.45), 0 2px 6px -2px rgb(28 25 22 / 0.12);
 }
 
+@font-face {
+  font-family: Outfit;
+  font-style: normal;
+  font-weight: 400 700;
+  font-display: swap;
+  src: url("/fonts/outfit-latin.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC,
+    U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215,
+    U+FEFF, U+FFFD;
+}
+
+@font-face {
+  font-family: Fraunces;
+  font-style: normal;
+  font-weight: 600 700;
+  font-display: swap;
+  src: url("/fonts/fraunces-latin.woff2") format("woff2");
+  unicode-range: U+0000-00FF, U+0131, U+0152-0153, U+02BB-02BC, U+02C6, U+02DA, U+02DC,
+    U+0304, U+0308, U+0329, U+2000-206F, U+20AC, U+2122, U+2191, U+2193, U+2212, U+2215,
+    U+FEFF, U+FFFD;
+}
+
 @layer base {
   html {
     -webkit-font-smoothing: antialiased;
@@ -38,6 +60,7 @@
     background: var(--color-background);
     color: var(--color-foreground);
     font-family: var(--font-sans);
+    font-size-adjust: from-font;
   }
 
   h1,
@@ -45,6 +68,7 @@
   h3 {
     text-wrap: balance;
     font-family: var(--font-display);
+    font-size-adjust: cap-height from-font;
   }
 
   p {
@@ -77,6 +101,37 @@
   --ease-out: cubic-bezier(0.23, 1, 0.32, 1);
   --ease-smooth-out: cubic-bezier(0.22, 1, 0.36, 1);
   --motion-scale-modal: 0.96;
+}
+
+.visually-hidden:where(:not(:focus-within, :active)) {
+  position: absolute !important;
+  clip-path: inset(50%) !important;
+  overflow: hidden !important;
+  width: 1px !important;
+  height: 1px !important;
+  margin: -1px !important;
+  padding: 0 !important;
+  border: 0 !important;
+  white-space: nowrap !important;
+}
+
+.skip-link:focus-visible {
+  position: fixed;
+  top: 0.75rem;
+  left: 0.75rem;
+  z-index: 80;
+  clip-path: none;
+  width: auto;
+  height: auto;
+  margin: 0;
+  padding: 0.5rem 0.85rem;
+  overflow: visible;
+  white-space: nowrap;
+  border-radius: var(--radius-sm);
+  background: var(--color-primary);
+  color: var(--color-primary-foreground);
+  outline: 2px solid var(--color-ring);
+  outline-offset: 2px;
 }
 
 .paper-grain {

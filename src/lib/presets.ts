@@ -45,18 +45,18 @@ export const LOOK_CLAUSE =
   "LOOK: Image 2 is the lighting and grade reference. Match its lighting, color grade, and contrast. Do not copy that person's face, hair, body, clothing, or identity. Match the backdrop treatment only if this task replaces the background.";
 
 export const BACKDROP_CLAUSE =
-  "BACKDROP: The last extra image is the studio paper. Replace only the background with that seamless paper — match color, texture, and falloff. Keep hair edges clean. Use this paper even if the task said to keep the original background. Do not change the subject.";
+  "BACKDROP: The last extra image is the studio paper. Replace only the background with that seamless paper. Match color, texture, and falloff. Keep hair edges clean. Use this paper even if the task said to keep the original background. Do not change the subject.";
 
 export const RETOUCH_CLAUSE =
   "RETOUCH: Gently reduce shine and minor blemishes only. Do not reshape the face, slim, change makeup, or airbrush pores away. Keep moles, freckles, and natural skin texture.";
 
 export const BW_CLAUSE =
-  "TONE: Convert the finished photograph to classic black-and-white yearbook toning — rich blacks, clean greys, no color cast, no sepia.";
+  "TONE: Convert the finished photograph to classic black-and-white yearbook toning: rich blacks, clean greys, no color cast, no sepia.";
 
 export const FRAMING_AUTO = "Preserve the original camera angle and crop.";
 
 const KEEP_BACKGROUND_PHRASES = [
-  " Keep the original background style, colors, and texture — do not replace the backdrop.",
+  " Keep the original background style, colors, and texture. Do not replace the backdrop.",
   " Do not replace or restyle the background.",
 ] as const;
 
@@ -86,14 +86,14 @@ export const RECIPES: {
     label: "Proof clean",
     blurb: "Strip watermarks. Clean grey studio backdrop. Yearbook finish.",
     prompt:
-      "Completely remove every watermark, logo, stamp, and repeating text overlay from the entire image including face, hair, clothing, and background. Replace the backdrop with a clean seamless professional photography studio grey paper — soft even medium-grey, no text, no logos, no patterns. Yearbook school-portrait finish, even studio lighting, sharp eyes.",
+      "Completely remove every watermark, logo, stamp, and repeating text overlay from the entire image including face, hair, clothing, and background. Replace the backdrop with a clean seamless professional photography studio grey paper: soft even medium-grey, no text, no logos, no patterns. Yearbook school-portrait finish, even studio lighting, sharp eyes.",
   },
   {
     id: "watermark",
     label: "Watermarks only",
     blurb: "Remove logos and text. Keep the original backdrop.",
     prompt:
-      "Remove every watermark, logo, stamp, and repeating text overlay. Reconstruct covered areas so they match surrounding pixels and lighting. Keep the original background style, colors, and texture — do not replace the backdrop.",
+      "Remove every watermark, logo, stamp, and repeating text overlay. Reconstruct covered areas so they match surrounding pixels and lighting. Keep the original background style, colors, and texture. Do not replace the backdrop.",
   },
   {
     id: "enhance",
@@ -114,28 +114,28 @@ export const RECIPES: {
     label: "Studio grey",
     blurb: "Seamless grey paper backdrop. Subject unchanged.",
     prompt:
-      "Replace only the background with a clean seamless professional photography studio grey paper backdrop — soft even medium-grey, no text, no logos. Keep hair edges clean and natural. Do not change the subject.",
+      "Replace only the background with a clean seamless professional photography studio grey paper backdrop: soft even medium-grey, no text, no logos. Keep hair edges clean and natural. Do not change the subject.",
   },
   {
     id: "white",
     label: "Studio white",
     blurb: "Seamless white paper backdrop. Subject unchanged.",
     prompt:
-      "Replace only the background with a clean seamless professional photography studio white paper backdrop — even bright white paper, no text, no logos. Keep hair edges clean and natural. Do not change the subject.",
+      "Replace only the background with a clean seamless professional photography studio white paper backdrop: even bright white paper, no text, no logos. Keep hair edges clean and natural. Do not change the subject.",
   },
   {
     id: "id",
     label: "ID photo",
     blurb: "Passport-style. White backdrop. 3:4 crop.",
     prompt:
-      "Produce a passport-style ID portrait. Replace the backdrop with even bright white seamless studio paper — no shadows, no text, no logos. Even front lighting, sharp eyes. Head-and-shoulders framing. Remove watermarks, logos, and overlay text. Do not change clothing.",
+      "Produce a passport-style ID portrait. Replace the backdrop with even bright white seamless studio paper: no shadows, no text, no logos. Even front lighting, sharp eyes. Head-and-shoulders framing. Remove watermarks, logos, and overlay text. Do not change clothing.",
   },
   {
     id: "linkedin",
     label: "LinkedIn",
     blurb: "Profile headshot. Studio light. Square crop.",
     prompt:
-      "Produce a professional profile headshot. Replace the backdrop with a clean seamless professional photography studio grey paper — soft even medium-grey, no text, no logos. Soft studio lighting with natural catchlights, sharp eyes. Remove watermarks, logos, and overlay text. Do not change clothing.",
+      "Produce a professional profile headshot. Replace the backdrop with a clean seamless professional photography studio grey paper: soft even medium-grey, no text, no logos. Soft studio lighting with natural catchlights, sharp eyes. Remove watermarks, logos, and overlay text. Do not change clothing.",
   },
   {
     id: "custom",

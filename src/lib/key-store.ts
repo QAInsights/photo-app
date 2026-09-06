@@ -2,7 +2,7 @@
  * The xAI API key, kept in this browser only and encrypted at rest.
  *
  * A random AES-256-GCM data key is generated once and stored in IndexedDB as
- * a NON-extractable CryptoKey — its raw bytes can never be read back out of
+ * a NON-extractable CryptoKey. Its raw bytes can never be read back out of
  * storage, only used by WebCrypto here. The key itself is stored beside it as
  * ciphertext + IV.
  *
@@ -96,7 +96,7 @@ export async function loadBrowserApiKey(): Promise<string | null> {
       await deleteRecords([SECRET_RECORD]);
       return null;
     }
-    // Copy into ArrayBuffer-backed views — structured clone from IndexedDB
+    // Copy into ArrayBuffer-backed views. Structured clone from IndexedDB
     // hands back ArrayBufferLike, which WebCrypto's types refuse.
     const iv = new Uint8Array(secret.iv);
     const data = new Uint8Array(secret.data);

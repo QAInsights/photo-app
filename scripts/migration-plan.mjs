@@ -1,6 +1,6 @@
 // @ts-check
 /**
- * Migration bookkeeping shared by the two appliers — `scripts/migrate.mjs`
+ * Migration bookkeeping shared by the two appliers: `scripts/migrate.mjs`
  * (deploy, `readdir`) and `src/lib/db.ts` (PGLite preview, `import.meta.glob`).
  *
  * Applied files are keyed by BASENAME, so the same file applies once no matter

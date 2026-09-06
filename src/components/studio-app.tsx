@@ -35,6 +35,19 @@ import {
   type RecipeId,
   type ToneId,
 } from "@/lib/presets";
+import {
+  SAMPLE_AFTER,
+  SAMPLE_AFTER_SOURCES,
+  SAMPLE_ASPECT,
+  SAMPLE_BEFORE,
+  SAMPLE_BEFORE_SOURCES,
+  SAMPLE_DISCLAIMER,
+  SAMPLE_HEIGHT,
+  SAMPLE_ID,
+  SAMPLE_NAME,
+  SAMPLE_SIZES,
+  SAMPLE_WIDTH,
+} from "@/lib/sample";
 import { FAQ } from "@/lib/site";
 import { cn } from "@/lib/utils";
 
@@ -58,6 +71,7 @@ type Photo = {
   resultUrl?: string;
   status: Status;
   error?: string;
+  isSample?: boolean;
 };
 
 type Backdrop = {
@@ -303,10 +317,36 @@ export function StudioApp() {
     downloadDataUrl(file, `${photo.name}-${print ? "print" : "hq"}.jpg`);
   }
 
+  const loadSample = useCallback(() => {
+    setPhotos((prev) => {
+      for (const photo of prev) {
+        if (photo.blobUrl.startsWith("blob:")) URL.revokeObjectURL(photo.blobUrl);
+      }
+      return [
+        {
+          id: SAMPLE_ID,
+          name: SAMPLE_NAME,
+          blobUrl: SAMPLE_BEFORE,
+          previewUrl: SAMPLE_BEFORE,
+          width: SAMPLE_WIDTH,
+          height: SAMPLE_HEIGHT,
+          aspect: SAMPLE_ASPECT,
+          resultUrl: SAMPLE_AFTER,
+          status: "done",
+          isSample: true,
+        },
+      ];
+    });
+    setSelectedId(SAMPLE_ID);
+    setRecipe("proof");
+    setCrop("auto");
+    setLookId(null);
+  }, []);
+
   function removePhoto(id: string) {
     setPhotos((prev) => {
       const target = prev.find((p) => p.id === id);
-      if (target) URL.revokeObjectURL(target.blobUrl);
+      if (target?.blobUrl.startsWith("blob:")) URL.revokeObjectURL(target.blobUrl);
       const next = prev.filter((p) => p.id !== id);
       setSelectedId((cur) => {
         if (cur !== id) return cur;
@@ -319,6 +359,9 @@ export function StudioApp() {
 
   return (
     <div className="paper-grain flex h-dvh flex-col overflow-hidden bg-background text-foreground">
+      <a href="#studio" className="skip-link visually-hidden">
+        Skip to studio
+      </a>
       <header className="flex shrink-0 items-center justify-between gap-3 border-b border-border px-4 py-3 sm:px-6">
         <div className="flex min-w-0 items-center gap-2.5">
           <Mark className="size-7 shrink-0 text-primary" />
@@ -348,8 +391,11 @@ export function StudioApp() {
         </div>
       </header>
 
-      <div className="mx-auto flex min-h-0 w-full max-w-[1400px] flex-1 flex-col overflow-y-auto lg:grid lg:grid-cols-[88px_minmax(0,1fr)_340px] lg:overflow-hidden">
-        <aside className="order-3 border-t border-border lg:order-none lg:min-h-0 lg:border-r lg:border-t-0">
+      <div className="flex min-h-0 w-full flex-1 flex-col overflow-y-auto lg:grid lg:grid-cols-[5rem_minmax(0,1fr)_20rem] lg:overflow-hidden xl:grid-cols-[5.5rem_minmax(0,1fr)_22rem]">
+        <aside
+          className="order-3 border-t border-border lg:order-none lg:min-h-0 lg:border-r lg:border-t-0"
+          aria-label="Photos"
+        >
           <Filmstrip
             photos={photos}
             selectedId={selected?.id ?? null}
@@ -361,20 +407,37 @@ export function StudioApp() {
           />
         </aside>
 
-        <main className="relative order-1 flex min-h-[52vh] flex-1 overflow-hidden lg:order-none lg:min-h-0">
+        <main
+          id="studio"
+          tabIndex={-1}
+          className={cn(
+            "relative order-1 flex flex-1 overflow-hidden outline-none lg:order-none lg:min-h-0",
+            selected ? "min-h-[52vh]" : "min-h-[72vh] sm:min-h-[64vh]",
+          )}
+        >
           {selected ? (
-            <CompareStage
-              beforeSrc={selected.blobUrl}
-              afterSrc={selected.resultUrl}
-              peekOriginal={peek}
-              alt={selected.name}
-            />
+            <>
+              <h1 className="visually-hidden">{selected.name}</h1>
+              <CompareStage
+                beforeSrc={selected.blobUrl}
+                afterSrc={selected.resultUrl}
+                peekOriginal={peek}
+                alt={selected.name}
+                width={selected.width}
+                height={selected.height}
+                lcp={selected.isSample}
+                beforeSources={selected.isSample ? SAMPLE_BEFORE_SOURCES : undefined}
+                afterSources={selected.isSample ? SAMPLE_AFTER_SOURCES : undefined}
+                sizes={selected.isSample ? SAMPLE_SIZES : undefined}
+              />
+            </>
           ) : (
             <DropEmpty
               dragOver={dragOver}
               onBrowse={() => inputRef.current?.click()}
               onDragOver={(on) => setDragOver(on)}
               onDrop={(files) => void addFiles(files)}
+              onUseSample={loadSample}
             />
           )}
           {selected?.status === "working" ? (
@@ -390,10 +453,20 @@ export function StudioApp() {
               {selected.error}
             </p>
           ) : null}
+          {selected?.isSample && selected.status !== "error" && selected.status !== "working" ? (
+            <p className="pointer-events-none absolute inset-x-4 bottom-3 text-center">
+              <span className="inline-block rounded-full bg-card/90 px-2.5 py-1 text-[11px] leading-relaxed text-muted-foreground shadow-print">
+                {SAMPLE_DISCLAIMER}
+              </span>
+            </p>
+          ) : null}
         </main>
 
-        <aside className="order-2 flex flex-col border-t border-border lg:order-none lg:min-h-0 lg:border-l lg:border-t-0">
-          <div className="space-y-5 p-4 sm:p-5 lg:min-h-0 lg:flex-1 lg:overflow-y-auto">
+        <aside
+          className="order-2 flex flex-col border-t border-border lg:order-none lg:min-h-0 lg:border-l lg:border-t-0"
+          aria-label="Finish options"
+        >
+          <div className="space-y-5 p-3 sm:p-4 lg:min-h-0 lg:flex-1 lg:overflow-y-auto">
             <div>
               <p className="text-xs font-medium tracking-wide text-subtle uppercase">Finish</p>
               <div className="mt-3 grid grid-cols-2 gap-2">
@@ -486,7 +559,7 @@ export function StudioApp() {
             />
           </div>
 
-          <div className="shrink-0 space-y-3 border-t border-border bg-background p-4 sm:p-5">
+          <div className="shrink-0 space-y-3 border-t border-border bg-background p-3 sm:p-4">
             <div className="flex items-center justify-between gap-3">
               <p className="text-xs font-medium tracking-wide text-subtle uppercase">Output</p>
               <div className="flex rounded-full border border-border bg-card p-0.5">
@@ -559,6 +632,7 @@ export function StudioApp() {
         type="file"
         accept="image/jpeg,image/png,image/webp,image/jpg"
         multiple
+        aria-label="Choose photos"
         className="sr-only"
         onChange={(e) => {
           if (e.target.files) void addFiles(e.target.files);
@@ -569,6 +643,7 @@ export function StudioApp() {
         ref={backdropInputRef}
         type="file"
         accept="image/jpeg,image/png,image/webp,image/jpg"
+        aria-label="Choose backdrop photo"
         className="sr-only"
         onChange={(e) => {
           const file = e.target.files?.[0];
@@ -690,6 +765,9 @@ function LookPicker({
                 <img
                   src={photo.resultUrl}
                   alt=""
+                  width={photo.width}
+                  height={photo.height}
+                  loading="lazy"
                   className="size-full object-cover"
                 />
                 {active ? (
@@ -726,7 +804,13 @@ function BackdropPicker({
       <p className="text-xs font-medium tracking-wide text-subtle uppercase">Backdrop</p>
       {backdrop ? (
         <div className="relative mt-2 overflow-hidden rounded-md border border-border">
-          <img src={backdrop.blobUrl} alt={backdrop.name} className="h-20 w-full object-cover" />
+          <img
+            src={backdrop.blobUrl}
+            alt={backdrop.name}
+            width={640}
+            height={160}
+            className="h-20 w-full object-cover"
+          />
           <p className="absolute inset-x-0 bottom-0 truncate bg-primary/75 px-2 py-1 text-[10px] text-primary-foreground">
             {backdrop.name}
           </p>
@@ -785,18 +869,23 @@ function Filmstrip({
   onAdd: () => void;
 }) {
   return (
-    <div className="flex gap-2 overflow-x-auto p-3 lg:h-full lg:flex-col lg:overflow-y-auto">
-      <button
-        type="button"
-        onClick={onAdd}
-        className="flex size-16 shrink-0 flex-col items-center justify-center gap-1 rounded-md border border-dashed border-border bg-card text-muted-foreground hover:bg-secondary lg:w-full"
-        aria-label="Add photos"
-      >
-        <Upload className="size-4" />
-        <span className="text-xs font-medium tracking-wide">Add</span>
-      </button>
+    <ul
+      role="list"
+      className="flex gap-2 overflow-x-auto p-2 lg:h-full lg:flex-col lg:overflow-y-auto lg:px-2 lg:py-3"
+    >
+      <li className="shrink-0">
+        <button
+          type="button"
+          onClick={onAdd}
+          className="flex size-16 shrink-0 flex-col items-center justify-center gap-1 rounded-md border border-dashed border-border bg-card text-muted-foreground hover:bg-secondary lg:w-full"
+          aria-label="Add photos"
+        >
+          <Upload className="size-4" />
+          <span className="text-xs font-medium tracking-wide">Add</span>
+        </button>
+      </li>
       {photos.map((photo) => (
-        <div key={photo.id} className="relative shrink-0">
+        <li key={photo.id} className="relative shrink-0">
           <button
             type="button"
             onClick={() => onSelect(photo.id)}
@@ -808,6 +897,9 @@ function Filmstrip({
             <img
               src={photo.resultUrl ?? photo.blobUrl}
               alt={photo.name}
+              width={photo.width}
+              height={photo.height}
+              loading={selectedId === photo.id ? undefined : "lazy"}
               className="size-full object-cover"
             />
           </button>
@@ -850,9 +942,9 @@ function Filmstrip({
           >
             <Trash2 className="size-3" />
           </button>
-        </div>
+        </li>
       ))}
-    </div>
+    </ul>
   );
 }
 
@@ -891,20 +983,72 @@ function XaiPolicyLink() {
   );
 }
 
+function SampleDemo({
+  onBrowse,
+  onUseSample,
+}: {
+  onBrowse: () => void;
+  onUseSample: () => void;
+}) {
+  return (
+    <div
+      className="mx-auto flex min-h-0 w-full max-w-3xl flex-1 flex-col px-4 pb-3 sm:px-6"
+      onClick={(e) => e.stopPropagation()}
+    >
+      <p className="shrink-0 text-sm text-muted-foreground">
+        <span className="font-medium tracking-wide text-subtle uppercase">Sample</span>
+        <span aria-hidden="true"> · </span>
+        Watermarked proof, finished with Studio AI.
+      </p>
+      <div className="relative mx-auto mt-3 min-h-0 w-full flex-1">
+        <div className="absolute inset-0 flex items-center justify-center">
+          <div className="relative h-full max-h-full w-auto max-w-full aspect-[3/4]">
+            <CompareStage
+              className="absolute inset-0 p-0 sm:p-0"
+              fill
+              beforeSrc={SAMPLE_BEFORE}
+              afterSrc={SAMPLE_AFTER}
+              peekOriginal={false}
+              alt="Sample yearbook proof before and after Studio AI"
+              width={SAMPLE_WIDTH}
+              height={SAMPLE_HEIGHT}
+              sizes={SAMPLE_SIZES}
+              beforeSources={SAMPLE_BEFORE_SOURCES}
+              afterSources={SAMPLE_AFTER_SOURCES}
+              lcp
+            />
+          </div>
+        </div>
+      </div>
+      <p className="mt-2 shrink-0 text-[11px] leading-relaxed text-muted-foreground">
+        {SAMPLE_DISCLAIMER}
+      </p>
+      <div className="mt-3 flex shrink-0 flex-wrap items-center justify-center gap-2">
+        <Button onClick={onBrowse}>Choose photos</Button>
+        <Button variant="outline" onClick={onUseSample}>
+          Open in studio
+        </Button>
+      </div>
+    </div>
+  );
+}
+
 function DropEmpty({
   dragOver,
   onBrowse,
   onDragOver,
   onDrop,
+  onUseSample,
 }: {
   dragOver: boolean;
   onBrowse: () => void;
   onDragOver: (on: boolean) => void;
   onDrop: (files: FileList) => void;
+  onUseSample: () => void;
 }) {
   return (
     <div
-      className="flex size-full min-h-[52vh] items-stretch p-3 sm:p-4 lg:p-5"
+      className="flex size-full min-h-0 items-stretch p-2 sm:p-3 lg:p-3"
       onDragOver={(e) => {
         e.preventDefault();
         onDragOver(true);
@@ -918,45 +1062,47 @@ function DropEmpty({
     >
       <div
         className={cn(
-          "stagger-in flex h-full min-h-[44vh] w-full flex-col items-center justify-center rounded-xl border border-dashed text-center transition-colors duration-[var(--motion-fast)] lg:min-h-0",
+          "stagger-in flex h-full min-h-0 w-full flex-col items-center overflow-hidden rounded-xl border border-dashed text-center transition-colors duration-[var(--motion-fast)]",
           dragOver ? "border-primary bg-secondary" : "border-border bg-card",
         )}
       >
-        <div className="flex w-full flex-1 flex-col items-center justify-center">
-          <button
-            type="button"
-            onClick={onBrowse}
-            className="flex w-full flex-col items-center justify-center gap-4 px-6 py-12 hover:bg-secondary/40 lg:py-16"
-          >
-            <Mark className="size-12 text-primary" />
-            <div className="max-w-md">
-              <h1 className="font-display text-3xl font-semibold tracking-tight sm:text-4xl">
-                Drop proofs here
-              </h1>
-              <p className="mt-2 text-sm leading-relaxed text-muted-foreground">
-                Yearbook scans, watermarked previews, everyday portraits. Finish with Studio AI.
-              </p>
-            </div>
-            <span className="inline-flex min-h-11 items-center rounded-md bg-primary px-4 text-sm font-medium text-primary-foreground">
-              Choose photos
-            </span>
-          </button>
-          <SiteLinks className="px-6 pb-4 justify-center text-sm font-semibold text-foreground" />
-        </div>
-        <section
-          aria-label="About Northlight"
-          className="mx-auto w-full max-w-xl space-y-3 px-6 pb-6 text-left"
+        <button
+          type="button"
+          onClick={onBrowse}
+          className="flex w-full shrink-0 flex-col items-center px-6 pt-4 hover:bg-secondary/40 sm:pt-5"
         >
-          {FAQ.map((item) => (
-            <details key={item.question} className="rounded-md border border-border bg-card-ink px-3 py-2">
-              <summary className="cursor-pointer text-sm font-medium">{item.question}</summary>
-              <p className="mt-2 text-xs leading-relaxed text-muted-foreground sm:text-sm">
-                {item.answer}
-              </p>
-            </details>
-          ))}
+          <Mark className="size-9 text-primary sm:size-11" />
+          <h1 className="font-display mt-3 text-2xl font-semibold tracking-tight sm:text-3xl">
+            Drop proofs here
+          </h1>
+          <p className="mt-2 max-w-md text-sm leading-relaxed text-muted-foreground">
+            Yearbook scans, watermarked previews, everyday portraits. Finish with Studio AI.
+            Try the sample. No upload needed.
+          </p>
+        </button>
+        <SampleDemo onBrowse={onBrowse} onUseSample={onUseSample} />
+        <SiteLinks className="shrink-0 px-6 pb-3 justify-center text-sm font-semibold text-foreground" />
+        <section
+          className="mx-auto w-full max-w-xl shrink-0 px-6 pb-3 text-left"
+          aria-labelledby="about-heading"
+        >
+          <details className="rounded-md border border-border bg-card-ink px-3 py-2">
+            <summary id="about-heading" className="cursor-pointer text-sm font-medium">
+              About Northlight
+            </summary>
+            <div className="mt-2 space-y-2">
+              {FAQ.map((item) => (
+                <details key={item.question} className="rounded-md border border-border bg-card px-3 py-2">
+                  <summary className="cursor-pointer text-sm font-medium">{item.question}</summary>
+                  <p className="mt-2 text-xs leading-relaxed text-muted-foreground sm:text-sm">
+                    {item.answer}
+                  </p>
+                </details>
+              ))}
+            </div>
+          </details>
         </section>
-        <p className="max-w-md px-6 pb-6 text-xs leading-relaxed text-muted-foreground sm:text-sm">
+        <p className="max-w-md shrink-0 px-6 pb-4 text-xs leading-relaxed text-muted-foreground sm:text-sm">
           Images you finish are processed per <XaiPolicyLink />.
         </p>
       </div>

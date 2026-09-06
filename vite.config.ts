@@ -10,7 +10,7 @@ import { nitro } from "nitro/vite";
 import { appEnvPlugin } from "./scripts/app-env-plugin.mjs";
 import { isMigrationFile } from "./scripts/migration-plan.mjs";
 
-/** The files `src/lib/db.ts` globs — same directory, same non-recursive scope. */
+/** The files `src/lib/db.ts` globs: same directory, same non-recursive scope. */
 function hasGlobbedMigrations(root: string): boolean {
   try {
     return readdirSync(join(root, "migrations")).some(isMigrationFile);
@@ -25,7 +25,7 @@ function hasGlobbedMigrations(root: string): boolean {
  * on import.
  *
  * Vite awaiting the hook puts this on time-to-first-render, so an app with no
- * migrations — no schema to apply — skips it entirely rather than paying for a
+ * migrations (no schema to apply) skips it entirely rather than paying for a
  * PGLite instance it never queries.
  */
 function pgliteBootstrapPlugin(): Plugin {
@@ -50,7 +50,7 @@ function pgliteBootstrapPlugin(): Plugin {
 }
 
 /**
- * Live-preview OAuth popup — handled HERE so the agent never has to create a
+ * Live-preview OAuth popup: handled HERE so the agent never has to create a
  * `/auth/popup` route (and cannot break it by scaffolding a React page that
  * paints the full app shell in the popup).
  *
@@ -140,8 +140,8 @@ function authPopupPlugin(): Plugin {
   };
 }
 
-// `0.0.0.0:8080` is the live-preview contract — don't change host/port.
-// The dev server starts once `src/router.tsx` and `src/routes/` exist — see
+// `0.0.0.0:8080` is the live-preview contract. Don't change host/port.
+// The dev server starts once `src/router.tsx` and `src/routes/` exist. See
 // AGENTS.md § "First scaffold".
 export default defineConfig(({ command, isPreview }) => ({
   server: {

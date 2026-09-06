@@ -83,7 +83,13 @@ export function SettingsDialog({
             </Dialog.Close>
           </div>
 
-          <div className="mt-6">
+          <form
+            className="mt-6"
+            onSubmit={(e) => {
+              e.preventDefault();
+              void save();
+            }}
+          >
             <div className="flex items-center justify-between">
               <label
                 htmlFor="xai-key"
@@ -108,12 +114,11 @@ export function SettingsDialog({
                   setValue(e.target.value);
                   setError(null);
                 }}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter") void save();
-                }}
                 placeholder={hasKey ? "Replace the stored key" : "xai-…"}
                 autoComplete="off"
                 spellCheck={false}
+                aria-invalid={error ? true : undefined}
+                aria-describedby={error ? "xai-key-error xai-key-help" : "xai-key-help"}
                 className="w-full rounded-md border border-border bg-card-ink py-2.5 pr-11 pl-9 text-sm outline-none ring-ring focus:ring-2"
               />
               <button
@@ -125,31 +130,35 @@ export function SettingsDialog({
                 {visible ? <EyeOff className="size-4" /> : <Eye className="size-4" />}
               </button>
             </div>
-            {error ? <p className="mt-2 text-sm text-destructive">{error}</p> : null}
-            <p className="mt-3 text-xs leading-relaxed text-muted-foreground">
+            {error ? (
+              <p id="xai-key-error" role="alert" className="mt-2 text-sm text-destructive">
+                {error}
+              </p>
+            ) : null}
+            <p id="xai-key-help" className="mt-3 text-xs leading-relaxed text-muted-foreground">
               Encrypted with a device-local key before it touches storage; the ciphertext and that
               key live in this browser only. When you press Finish, the key is sent to this
-              app&rsquo;s server just to call x.ai — it is never stored there. Clearing site data
+              app&rsquo;s server just to call x.ai. It is never stored there. Clearing site data
               removes it.
             </p>
-          </div>
 
-          <div className="mt-6 flex items-center gap-2">
-            <Button
-              className="flex-1"
-              disabled={busy || value.trim().length === 0}
-              onClick={() => void save()}
-            >
-              {busy ? <LoaderCircle className="size-4 animate-spin" /> : null}
-              {hasKey ? "Replace key" : "Save key"}
-            </Button>
-            {hasKey ? (
-              <Button variant="outline" disabled={busy} onClick={() => void remove()}>
-                <Trash2 className="size-4" />
-                Remove
+            <div className="mt-6 flex items-center gap-2">
+              <Button
+                type="submit"
+                className="flex-1"
+                disabled={busy || value.trim().length === 0}
+              >
+                {busy ? <LoaderCircle className="size-4 animate-spin" /> : null}
+                {hasKey ? "Replace key" : "Save key"}
               </Button>
-            ) : null}
-          </div>
+              {hasKey ? (
+                <Button type="button" variant="outline" disabled={busy} onClick={() => void remove()}>
+                  <Trash2 className="size-4" />
+                  Remove
+                </Button>
+              ) : null}
+            </div>
+          </form>
         </Dialog.Content>
       </Dialog.Portal>
     </Dialog.Root>
