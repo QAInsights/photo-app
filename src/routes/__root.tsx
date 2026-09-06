@@ -63,7 +63,7 @@ export const Route = createRootRoute({
       { rel: "apple-touch-icon", href: "/apple-touch-icon.png" },
       { rel: "manifest", href: "/manifest.webmanifest" },
       { rel: "sitemap", type: "application/xml", href: "/sitemap.xml" },
-      { rel: "alternate", type: "text/markdown", href: "/index.md", title: "Markdown" },
+      { rel: "alternate", type: "text/markdown", href: "/about.md", title: "Markdown" },
       { rel: "alternate", type: "text/plain", href: "/llms.txt", title: "llms.txt" },
       { rel: "stylesheet", href: appCss },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
@@ -86,7 +86,7 @@ export const Route = createRootRoute({
       <body className="min-h-dvh bg-background text-foreground">
         <noscript>
           Northlight is an AI portrait studio at photo.dosa.dev. Enable JavaScript to
-          finish photos. Product facts: /index.md and /llms.txt.
+          finish photos. Product facts: /about.md and /llms.txt.
         </noscript>
         <PreviewHostBridge />
         <AuthProvider>
