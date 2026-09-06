@@ -2,6 +2,8 @@
 
 Local photo studio. Drop portraits, strip watermarks, clean studio backdrops, export print-ready JPGs.
 
+Live: [https://photo.dosa.dev/](https://photo.dosa.dev/) · Agents: [llms.txt](https://photo.dosa.dev/llms.txt)
+
 ## Run
 
 ```bash

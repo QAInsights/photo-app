@@ -1,5 +1,8 @@
 {
-  "title": "Northlight",
+  "title": "Northlight — AI portrait studio",
   "type": "website",
-  "card": "custom"
+  "card": "summary_large_image",
+  "description": "Finish portraits in the browser. Strip watermarks, clean studio backdrops, export print-ready HQ. Photos are not stored.",
+  "url": "https://photo.dosa.dev/",
+  "image": "https://photo.dosa.dev/og.png"
 }

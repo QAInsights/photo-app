@@ -1,0 +1,9 @@
+/* TEAM */
+Site: Northlight
+URL: https://photo.dosa.dev/
+Related: https://dosa.dev, https://qainsights.com, https://ai.dosa.dev
+
+/* SITE */
+Standards: HTML5, CSS, JSON-LD, Web App Manifest, llms.txt
+Software: TanStack Start, Vite, xAI Imagine
+Privacy: Photos are not stored. Finished images are processed per https://x.ai/legal/privacy-policy

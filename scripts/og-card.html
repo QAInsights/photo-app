@@ -1,0 +1,88 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,600;9..144,700&family=Outfit:wght@400;500;600&display=swap"
+      rel="stylesheet"
+    />
+    <style>
+      html,
+      body {
+        margin: 0;
+        width: 1200px;
+        height: 630px;
+        overflow: hidden;
+        background: #efeae3;
+        color: #1c1916;
+        font-family: Outfit, ui-sans-serif, system-ui, sans-serif;
+      }
+      .card {
+        box-sizing: border-box;
+        width: 1200px;
+        height: 630px;
+        padding: 72px 80px;
+        display: flex;
+        flex-direction: column;
+        justify-content: space-between;
+        background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='180' height='180'%3E%3Cfilter id='n'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.85' numOctaves='2' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='180' height='180' filter='url(%23n)' opacity='0.045'/%3E%3C/svg%3E");
+      }
+      .mark {
+        width: 72px;
+        height: 72px;
+        color: #24302c;
+      }
+      h1 {
+        margin: 28px 0 0;
+        font-family: Fraunces, ui-serif, Georgia, serif;
+        font-size: 92px;
+        font-weight: 600;
+        letter-spacing: -0.03em;
+        line-height: 0.95;
+      }
+      p {
+        margin: 18px 0 0;
+        max-width: 820px;
+        font-size: 28px;
+        line-height: 1.35;
+        color: #6b6560;
+      }
+      .foot {
+        display: flex;
+        justify-content: space-between;
+        align-items: baseline;
+        font-size: 22px;
+        font-weight: 500;
+        color: #24302c;
+      }
+      .foot span {
+        color: #8a837c;
+        font-weight: 400;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="card">
+      <div>
+        <svg class="mark" viewBox="0 0 32 32" aria-hidden="true" fill="none">
+          <circle cx="16" cy="16" r="13.25" stroke="currentColor" stroke-width="1.5" />
+          <path
+            d="M16 5.5 20.4 13.2 28.5 14.3 22.5 20.1 24.1 28.2 16 24.1 7.9 28.2 9.5 20.1 3.5 14.3 11.6 13.2Z"
+            stroke="currentColor"
+            stroke-width="1.35"
+            stroke-linejoin="round"
+          />
+          <circle cx="16" cy="16" r="3.1" fill="currentColor" />
+        </svg>
+        <h1>Northlight</h1>
+        <p>Finish portraits. Strip watermarks. Clean studio paper. Print-ready HQ.</p>
+      </div>
+      <div class="foot">
+        <strong>photo.dosa.dev</strong>
+        <span>Identity locked. Photos not stored.</span>
+      </div>
+    </div>
+  </body>
+</html>

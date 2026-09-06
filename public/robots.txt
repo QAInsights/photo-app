@@ -1,0 +1,5 @@
+User-agent: *
+Allow: /
+
+Sitemap: https://photo.dosa.dev/sitemap.xml
+# Product facts for agents: https://photo.dosa.dev/llms.txt

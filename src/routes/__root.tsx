@@ -6,29 +6,66 @@ import {
 } from "@tanstack/react-router";
 import { AuthProvider } from "@/lib/auth/provider";
 import { PreviewHostBridge } from "@/components/preview-host-bridge";
+import {
+  jsonLd,
+  SITE_DESCRIPTION,
+  SITE_NAME,
+  SITE_THEME,
+  SITE_TITLE,
+  SITE_URL,
+} from "@/lib/site";
 import { Toaster } from "sonner";
 import appCss from "../styles.css?url";
 
-const APP_NAME = "Northlight";
+const ogImage = `${SITE_URL}/og.png`;
 
 export const Route = createRootRoute({
   head: () => ({
     meta: [
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
-      { title: APP_NAME },
+      { title: SITE_TITLE },
+      { "script:ld+json": jsonLd },
+      { name: "description", content: SITE_DESCRIPTION },
       {
-        name: "description",
+        name: "keywords",
         content:
-          "Finish portraits with Studio AI. Remove watermarks, clean studio backdrops, export print-ready HQ.",
+          "yearbook photo editor, remove watermark from portrait, studio backdrop, passport photo, LinkedIn headshot, AI photo studio",
       },
-      { name: "theme-color", content: "#efeae3" },
+      { name: "author", content: "dosa.dev" },
+      { name: "theme-color", content: SITE_THEME },
+      { name: "color-scheme", content: "light" },
+      { name: "robots", content: "index, follow" },
+      { name: "googlebot", content: "index, follow" },
+      { name: "application-name", content: SITE_NAME },
+      { name: "apple-mobile-web-app-capable", content: "yes" },
+      { name: "apple-mobile-web-app-title", content: SITE_NAME },
+      { name: "mobile-web-app-capable", content: "yes" },
+      { property: "og:type", content: "website" },
+      { property: "og:site_name", content: SITE_NAME },
+      { property: "og:title", content: SITE_TITLE },
+      { property: "og:description", content: SITE_DESCRIPTION },
+      { property: "og:url", content: SITE_URL },
+      { property: "og:image", content: ogImage },
+      { property: "og:image:width", content: "1200" },
+      { property: "og:image:height", content: "630" },
+      { property: "og:image:alt", content: "Northlight AI portrait studio" },
+      { property: "og:locale", content: "en_US" },
+      { name: "twitter:card", content: "summary_large_image" },
+      { name: "twitter:title", content: SITE_TITLE },
+      { name: "twitter:description", content: SITE_DESCRIPTION },
+      { name: "twitter:image", content: ogImage },
     ],
     links: [
+      { rel: "canonical", href: SITE_URL },
       { rel: "icon", type: "image/svg+xml", href: "/favicon.svg" },
+      { rel: "icon", type: "image/png", sizes: "192x192", href: "/icon-192.png" },
+      { rel: "apple-touch-icon", href: "/apple-touch-icon.png" },
+      { rel: "manifest", href: "/manifest.webmanifest" },
+      { rel: "sitemap", type: "application/xml", href: "/sitemap.xml" },
+      { rel: "alternate", type: "text/markdown", href: "/index.md", title: "Markdown" },
+      { rel: "alternate", type: "text/plain", href: "/llms.txt", title: "llms.txt" },
       { rel: "stylesheet", href: appCss },
-      { rel: "manifest", href: "/__grok/manifest.webmanifest" },
-      { rel: "apple-touch-icon", href: "/__grok/icon-180.png" },
       { rel: "preconnect", href: "https://fonts.googleapis.com" },
       {
         rel: "preconnect",
@@ -47,6 +84,10 @@ export const Route = createRootRoute({
         <HeadContent />
       </head>
       <body className="min-h-dvh bg-background text-foreground">
+        <noscript>
+          Northlight is an AI portrait studio at photo.dosa.dev. Enable JavaScript to
+          finish photos. Product facts: /index.md and /llms.txt.
+        </noscript>
         <PreviewHostBridge />
         <AuthProvider>
           <Outlet />

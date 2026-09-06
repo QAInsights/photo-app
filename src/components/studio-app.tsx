@@ -35,6 +35,7 @@ import {
   type RecipeId,
   type ToneId,
 } from "@/lib/presets";
+import { FAQ } from "@/lib/site";
 import { cn } from "@/lib/utils";
 
 const XAI_PRIVACY_POLICY = "https://x.ai/legal/privacy-policy";
@@ -942,6 +943,19 @@ function DropEmpty({
           </button>
           <SiteLinks className="px-6 pb-4 justify-center text-sm font-semibold text-foreground" />
         </div>
+        <section
+          aria-label="About Northlight"
+          className="mx-auto w-full max-w-xl space-y-3 px-6 pb-6 text-left"
+        >
+          {FAQ.map((item) => (
+            <details key={item.question} className="rounded-md border border-border bg-card-ink px-3 py-2">
+              <summary className="cursor-pointer text-sm font-medium">{item.question}</summary>
+              <p className="mt-2 text-xs leading-relaxed text-muted-foreground sm:text-sm">
+                {item.answer}
+              </p>
+            </details>
+          ))}
+        </section>
         <p className="max-w-md px-6 pb-6 text-xs leading-relaxed text-muted-foreground sm:text-sm">
           Images you finish are processed per <XaiPolicyLink />.
         </p>
