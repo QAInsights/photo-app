@@ -29,6 +29,7 @@
   },
   "include": [
     "src",
-    "server"
+    "server",
+    "worker-configuration.d.ts"
   ]
 }

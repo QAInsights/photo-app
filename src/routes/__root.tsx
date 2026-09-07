@@ -1,20 +1,8 @@
-import {
-  createRootRoute,
-  HeadContent,
-  Outlet,
-  Scripts,
-} from "@tanstack/react-router";
-import { AuthProvider } from "@/lib/auth/provider";
+import { ClerkProvider } from "@clerk/tanstack-react-start";
+import { createRootRoute, HeadContent, Outlet, Scripts } from "@tanstack/react-router";
 import { PreviewHostBridge } from "@/components/preview-host-bridge";
 import { SAMPLE_LCP_PRELOAD } from "@/lib/sample";
-import {
-  jsonLd,
-  SITE_DESCRIPTION,
-  SITE_NAME,
-  SITE_THEME,
-  SITE_TITLE,
-  SITE_URL,
-} from "@/lib/site";
+import { jsonLd, SITE_DESCRIPTION, SITE_NAME, SITE_THEME, SITE_TITLE, SITE_URL } from "@/lib/site";
 import { Toaster } from "sonner";
 import appCss from "../styles.css?url";
 
@@ -96,22 +84,21 @@ export const Route = createRootRoute({
         <HeadContent />
       </head>
       <body className="min-h-dvh bg-background text-foreground">
-        <noscript>
-          Northlight is an AI portrait studio at photo.dosa.dev. Enable JavaScript to
-          finish photos. Product facts: /about.md and /llms.txt.
-        </noscript>
-        <PreviewHostBridge />
-        <AuthProvider>
+        <ClerkProvider>
+          <noscript>
+            Northlight is an AI portrait studio at photo.dosa.dev. Enable JavaScript to finish
+            photos. Product facts: /about.md and /llms.txt.
+          </noscript>
+          <PreviewHostBridge />
           <Outlet />
-        </AuthProvider>
-        <Toaster
-          position="bottom-center"
-          toastOptions={{
-            className:
-              "font-sans border-border bg-card text-foreground shadow-print",
-          }}
-        />
-        <Scripts />
+          <Toaster
+            position="bottom-center"
+            toastOptions={{
+              className: "font-sans border-border bg-card text-foreground shadow-print",
+            }}
+          />
+          <Scripts />
+        </ClerkProvider>
       </body>
     </html>
   ),

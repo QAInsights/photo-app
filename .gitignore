@@ -1,6 +1,7 @@
 node_modules
 dist
 .vercel
+.wrangler
 .tanstack
 .output
 .nitro
@@ -13,3 +14,4 @@ attachments
 artifacts
 public/__grok
 .node_modules.lock
+.clerk/

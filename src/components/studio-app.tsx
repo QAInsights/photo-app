@@ -17,6 +17,7 @@ import {
 import { useCallback, useEffect, useRef, useState } from "react";
 import { toast } from "sonner";
 import { CompareStage } from "@/components/compare-stage";
+import { AuthControls } from "@/components/auth-controls";
 import { Mark } from "@/components/mark";
 import { SettingsDialog } from "@/components/settings-dialog";
 import { Button } from "@/components/ui/button";
@@ -371,11 +372,12 @@ export function StudioApp() {
           </div>
         </div>
         <div className="flex shrink-0 items-center gap-2">
+          <AuthControls />
           <a
             href={DONATE_URL}
             target="_blank"
             rel="noopener noreferrer"
-            className="donate-btn inline-flex min-h-9 items-center gap-1.5 rounded-full bg-primary px-3 text-xs font-semibold text-primary-foreground sm:min-h-10 sm:px-4 sm:text-sm"
+            className="donate-btn hidden min-h-9 items-center gap-1.5 rounded-full bg-primary px-3 text-xs font-semibold text-primary-foreground lg:inline-flex lg:min-h-10 lg:px-4 lg:text-sm"
           >
             <Coffee className="size-4" />
             Donate

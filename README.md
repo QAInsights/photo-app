@@ -44,4 +44,27 @@ This app does not persist photos. Images you finish are processed per [xAI's pri
 npm run dev        # Vite on 0.0.0.0:8080
 npm run build      # production build
 npm run typecheck
+npm run cf:check   # Cloudflare production build + deploy dry run
+npm run deploy     # deploy the photo-app Worker
 ```
+
+## Cloudflare deployment
+
+The production app runs as the `photo-app` Cloudflare Worker. The custom domain
+`photo.dosa.dev` is attached to that Worker in Cloudflare.
+
+```bash
+npm install
+npm run cf:check
+npm run deploy
+```
+
+Set `XAI_API_KEY` as a Worker secret if the deployment should provide Studio AI
+without requiring a browser-supplied key:
+
+```bash
+npx wrangler secret put XAI_API_KEY
+```
+
+Do not put the key in `wrangler.jsonc`. The app keeps source and finished photos
+in request/browser memory only; it has no image-storage binding.
