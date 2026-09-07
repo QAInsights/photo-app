@@ -21,7 +21,7 @@ import { AuthControls } from "@/components/auth-controls";
 import { Mark } from "@/components/mark";
 import { SettingsDialog } from "@/components/settings-dialog";
 import { Button } from "@/components/ui/button";
-import { finishPhoto, studioStatus } from "@/lib/finish";
+import { finishPhoto } from "@/lib/finish";
 import { dataUrlToPrint, downloadDataUrl, fileToLoadedPhoto, resizeDataUrl } from "@/lib/image-io";
 import { loadBrowserApiKey } from "@/lib/key-store";
 import {
@@ -105,7 +105,6 @@ export function StudioApp() {
   const [backdrop, setBackdrop] = useState<Backdrop | null>(null);
   const [backdropOver, setBackdropOver] = useState(false);
   const [resolution, setResolution] = useState<"1k" | "2k">("2k");
-  const [serverAi, setServerAi] = useState<boolean | null>(null);
   const [browserKey, setBrowserKey] = useState<string | null>(null);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [peek, setPeek] = useState(false);
@@ -118,16 +117,12 @@ export function StudioApp() {
 
   useEffect(() => {
     let alive = true;
-    Promise.all([
-      studioStatus()
-        .then((s) => s.available)
-        .catch(() => false),
-      loadBrowserApiKey().catch(() => null),
-    ]).then(([available, key]) => {
-      if (!alive) return;
-      setServerAi(available);
-      setBrowserKey(key);
-    });
+    loadBrowserApiKey()
+      .catch(() => null)
+      .then((key) => {
+        if (!alive) return;
+        setBrowserKey(key);
+      });
     return () => {
       alive = false;
     };
@@ -199,7 +194,7 @@ export function StudioApp() {
     return () => window.removeEventListener("paste", onPaste);
   }, [addFiles]);
 
-  const aiReady = serverAi !== false || browserKey !== null;
+  const aiReady = browserKey !== null;
   const recipeMeta = recipeById(recipe);
   const customReady = recipe !== "custom" || custom.trim().length > 0;
   const canFinish = Boolean(selected) && !working && aiReady && customReady;
@@ -271,7 +266,9 @@ export function StudioApp() {
         hasBackdrop: Boolean(backdropImageDataUrl),
       });
       if (prompt.length > PROMPT_MAX) {
-        throw new Error("Instructions are too long with look, backdrop, and retouch. Shorten Custom.");
+        throw new Error(
+          "Instructions are too long with look, backdrop, and retouch. Shorten Custom.",
+        );
       }
       const out = await finishPhoto({
         data: {
@@ -521,12 +518,7 @@ export function StudioApp() {
               </label>
             ) : null}
 
-            <Segment
-              label="Crop"
-              value={crop}
-              options={CROPS}
-              onChange={setCrop}
-            />
+            <Segment label="Crop" value={crop} options={CROPS} onChange={setCrop} />
             <Segment
               label="Tone"
               value={tone}
@@ -546,11 +538,7 @@ export function StudioApp() {
               onChange={(id) => setRetouch(id === "on")}
             />
 
-            <LookPicker
-              photos={photos}
-              lookId={lookId}
-              onPick={setLookId}
-            />
+            <LookPicker photos={photos} lookId={lookId} onPick={setLookId} />
             <BackdropPicker
               backdrop={backdrop}
               dragOver={backdropOver}
@@ -842,7 +830,9 @@ function BackdropPicker({
           }}
           className={cn(
             "mt-2 flex min-h-16 w-full flex-col items-center justify-center gap-1 rounded-md border border-dashed px-3 py-3 text-center text-xs leading-snug transition-colors duration-[var(--motion-quick)]",
-            dragOver ? "border-primary bg-secondary" : "border-border bg-card text-muted-foreground hover:bg-secondary",
+            dragOver
+              ? "border-primary bg-secondary"
+              : "border-border bg-card text-muted-foreground hover:bg-secondary",
           )}
         >
           <ImageIcon className="size-4" />
@@ -919,7 +909,9 @@ function Filmstrip({
             <button
               type="button"
               aria-label={
-                lookId === photo.id ? `Stop using ${photo.name} as look` : `Use ${photo.name} as look`
+                lookId === photo.id
+                  ? `Stop using ${photo.name} as look`
+                  : `Use ${photo.name} as look`
               }
               aria-pressed={lookId === photo.id}
               onClick={(e) => {
@@ -952,7 +944,12 @@ function Filmstrip({
 
 function SiteLinks({ className }: { className?: string }) {
   return (
-    <p className={cn("flex flex-wrap items-center gap-x-1.5 text-xs text-muted-foreground", className)}>
+    <p
+      className={cn(
+        "flex flex-wrap items-center gap-x-1.5 text-xs text-muted-foreground",
+        className,
+      )}
+    >
       {SITE_LINKS.map((site, i) => (
         <span key={site.href} className="inline-flex items-center gap-x-1.5">
           {i > 0 ? <span aria-hidden="true">·</span> : null}
@@ -985,13 +982,7 @@ function XaiPolicyLink() {
   );
 }
 
-function SampleDemo({
-  onBrowse,
-  onUseSample,
-}: {
-  onBrowse: () => void;
-  onUseSample: () => void;
-}) {
+function SampleDemo({ onBrowse, onUseSample }: { onBrowse: () => void; onUseSample: () => void }) {
   return (
     <div
       className="mx-auto flex min-h-0 w-full max-w-3xl flex-1 flex-col px-4 pb-3 sm:px-6"
@@ -1078,8 +1069,8 @@ function DropEmpty({
             Drop proofs here
           </h1>
           <p className="mt-2 max-w-md text-sm leading-relaxed text-muted-foreground">
-            Yearbook scans, watermarked previews, everyday portraits. Finish with Studio AI.
-            Try the sample. No upload needed.
+            Yearbook scans, watermarked previews, everyday portraits. Finish with Studio AI. Try the
+            sample. No upload needed.
           </p>
         </button>
         <SampleDemo onBrowse={onBrowse} onUseSample={onUseSample} />
@@ -1094,7 +1085,10 @@ function DropEmpty({
             </summary>
             <div className="mt-2 space-y-2">
               {FAQ.map((item) => (
-                <details key={item.question} className="rounded-md border border-border bg-card px-3 py-2">
+                <details
+                  key={item.question}
+                  className="rounded-md border border-border bg-card px-3 py-2"
+                >
                   <summary className="cursor-pointer text-sm font-medium">{item.question}</summary>
                   <p className="mt-2 text-xs leading-relaxed text-muted-foreground sm:text-sm">
                     {item.answer}

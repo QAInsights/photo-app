@@ -1,0 +1,17 @@
+{
+  "auth_email": {
+    "required_for_sign_up": true,
+    "sign_in_strategies": ["email_link"],
+    "used_for_sign_in": true,
+    "used_for_sign_up": true,
+    "verification_strategies": ["email_link"],
+    "verify_at_sign_up": true
+  },
+  "auth_password": {
+    "enabled": false,
+    "required": false
+  },
+  "auth_attack_protection": {
+    "email_link_require_same_client": false
+  }
+}

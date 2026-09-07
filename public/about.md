@@ -19,6 +19,6 @@ Optional: crop (Auto / 1:1 / 3:4 / 2:3), black-and-white, gentle retouch, pin a 
 
 ## Privacy
 
-This app does not keep your photos. Images you finish are processed per [xAI's privacy policy](https://x.ai/legal/privacy-policy). Bring your own xAI key in Settings if the host has none.
+This app does not keep your photos. Images you finish are processed per [xAI's privacy policy](https://x.ai/legal/privacy-policy). For now, Studio AI requires your own xAI key in Settings; paid credits are planned.
 
 For agents: [llms.txt](https://photo.dosa.dev/llms.txt) · [llms-full.txt](https://photo.dosa.dev/llms-full.txt)

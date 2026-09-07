@@ -4,6 +4,9 @@
   "main": "@tanstack/react-start/server-entry",
   "compatibility_date": "2026-09-07",
   "compatibility_flags": ["nodejs_compat"],
+  "secrets": {
+    "required": ["VITE_CLERK_PUBLISHABLE_KEY", "CLERK_SECRET_KEY"],
+  },
   "limits": {
     "cpu_ms": 30000,
   },

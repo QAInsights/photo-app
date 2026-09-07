@@ -11,8 +11,8 @@ const Input = z.object({
   prompt: z.string().min(8).max(2000),
   aspectRatio: z.enum(["auto", "1:1", "3:4", "2:3"]).default("auto"),
   resolution: z.enum(["1k", "2k"]),
-  // Browser-supplied xAI key (Settings). Used for this request only, never
-  // persisted server-side, and wins over the deployment's XAI_API_KEY.
+  // Browser-supplied xAI key (Settings). Used for this request only and never
+  // persisted server-side. Paid credits will use a separate authenticated path.
   apiKey: z.string().trim().max(256).optional(),
 });
 
@@ -76,11 +76,11 @@ async function callEdits(
 export const finishPhoto = createServerFn({ method: "POST" })
   .validator((input: unknown) => Input.parse(input))
   .handler(async ({ data }): Promise<FinishResult> => {
-    const apiKey = data.apiKey || process.env.XAI_API_KEY;
+    const apiKey = data.apiKey;
     if (!apiKey) {
       return {
         ok: false,
-        error: "Studio AI is not available in this environment.",
+        error: "Add your xAI API key in Settings. Paid credits are not available yet.",
       };
     }
 
@@ -114,7 +114,3 @@ export const finishPhoto = createServerFn({ method: "POST" })
       clearTimeout(timer);
     }
   });
-
-export const studioStatus = createServerFn({ method: "GET" }).handler(async () => ({
-  available: Boolean(process.env.XAI_API_KEY),
-}));

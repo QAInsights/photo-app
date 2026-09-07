@@ -12,7 +12,7 @@
     "db:migrate": "node scripts/migrate.mjs",
     "build:dev": "node scripts/with-app-env.mjs vite build --mode development",
     "preview": "node scripts/with-app-env.mjs vite preview",
-    "deploy": "npm run build && wrangler deploy",
+    "deploy": "npm run clerk:check:prod && npm run build && wrangler deploy",
     "cf:typegen": "wrangler types --include-runtime false",
     "cf:check": "npm run build && wrangler deploy --dry-run",
     "preview:restart": "node scripts/preview.mjs restart",
@@ -21,7 +21,8 @@
     "check:auth": "node scripts/check-auth-invariant.mjs",
     "test": "node --test 'scripts/**/*.test.mjs' && node --experimental-strip-types --test src/lib/*.test.ts",
     "lint": "eslint .",
-    "format": "prettier --write ."
+    "format": "prettier --write .",
+    "clerk:check:prod": "node scripts/check-clerk-production.mjs"
   },
   "dependencies": {
     "@clerk/tanstack-react-start": "^1.5.12",

@@ -3,6 +3,13 @@ import { createFileRoute, Link } from "@tanstack/react-router";
 import { Mark } from "@/components/mark";
 
 export const Route = createFileRoute("/sign-up/$")({
+  head: () => ({
+    meta: [
+      { title: "Sign up | Northlight" },
+      { name: "robots", content: "noindex, nofollow" },
+      { name: "googlebot", content: "noindex, nofollow" },
+    ],
+  }),
   component: Page,
 });
 

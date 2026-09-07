@@ -9,7 +9,6 @@ Live: [https://photo.dosa.dev/](https://photo.dosa.dev/) · Agents: [llms.txt](h
 ```bash
 npm install
 cp .env.example .env
-# Put your xAI API key in .env if you want Studio AI
 npm run dev
 ```
 
@@ -32,9 +31,11 @@ Open the printed local URL. Default port is **8080**.
 5. Press **Finish photo**. Drag the slider to compare. Hold **Space** for the original.
 6. Download **HQ** or **Print JPG** (2×).
 
-Studio AI calls `https://api.x.ai/v1/images/edits` with `grok-imagine-image-2.0`. Set `XAI_API_KEY` in `.env`. Without a key, add one in **Settings**.
-
-You can also bring your own key in the app: open **Settings** (top right) and paste it. It is stored AES-256-GCM encrypted in this browser only, takes precedence over the server key, and can be removed again from the same dialog.
+Studio AI calls `https://api.x.ai/v1/images/edits` with `grok-imagine-image-2.0`.
+For now, bring your own xAI key: open **Settings** (top right) and paste it. It is
+stored AES-256-GCM encrypted in this browser only, sent only with your image
+request, and can be removed from the same dialog. Paid credits will use a
+separate authenticated path when implemented.
 
 This app does not persist photos. Images you finish are processed per [xAI's privacy policy](https://x.ai/legal/privacy-policy).
 
@@ -44,6 +45,7 @@ This app does not persist photos. Images you finish are processed per [xAI's pri
 npm run dev        # Vite on 0.0.0.0:8080
 npm run build      # production build
 npm run typecheck
+npm run clerk:check:prod # verify production uses the committed auth policy
 npm run cf:check   # Cloudflare production build + deploy dry run
 npm run deploy     # deploy the photo-app Worker
 ```
@@ -53,18 +55,33 @@ npm run deploy     # deploy the photo-app Worker
 The production app runs as the `photo-app` Cloudflare Worker. The custom domain
 `photo.dosa.dev` is attached to that Worker in Cloudflare.
 
+Install the Clerk CLI and authenticate it before using the deployment scripts:
+
+```bash
+npm install -g clerk
+clerk auth login
+```
+
 ```bash
 npm install
 npm run cf:check
 npm run deploy
 ```
 
-Set `XAI_API_KEY` as a Worker secret if the deployment should provide Studio AI
-without requiring a browser-supplied key:
+The Worker requires both Clerk variables at runtime. Configure
+`VITE_CLERK_PUBLISHABLE_KEY` as a Cloudflare build variable and Worker secret,
+and configure `CLERK_SECRET_KEY` as a Worker secret. Never commit either value.
+
+The desired production authentication policy is versioned in
+`clerk.production.json`. Preview, apply, and verify it with:
 
 ```bash
-npx wrangler secret put XAI_API_KEY
+clerk config patch --app app_3J0Xwvy7J3M2EM3uq1M0aaudEFq --instance prod --file clerk.production.json --dry-run
+clerk config patch --app app_3J0Xwvy7J3M2EM3uq1M0aaudEFq --instance prod --file clerk.production.json --yes
+npm run clerk:check:prod
 ```
 
-Do not put the key in `wrangler.jsonc`. The app keeps source and finished photos
-in request/browser memory only; it has no image-storage binding.
+The app keeps source and finished photos in request/browser memory only; it has
+no image-storage binding. Production does not accept a deployment-wide xAI key:
+anonymous use remains BYOK until paid credits have an authenticated entitlement
+and atomic debit path.

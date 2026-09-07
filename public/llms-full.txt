@@ -34,7 +34,7 @@ Every finish keeps the same person: facial features, age, skin tone, hair, eyes,
 
 ## Privacy
 
-The app does not persist photos. Images you finish are processed per https://x.ai/legal/privacy-policy. A browser-supplied xAI key is stored AES-256-GCM in this browser only, takes precedence over a server `XAI_API_KEY`, and can be removed from Settings.
+The app does not persist photos. Images you finish are processed per https://x.ai/legal/privacy-policy. For now, Studio AI requires a browser-supplied xAI key. It is stored AES-256-GCM in this browser only, sent only with the image request, and can be removed from Settings. Paid credits are planned.
 
 ## How to finish a photo
 

@@ -32,7 +32,7 @@ export const FAQ = [
   {
     question: "Do I need an API key?",
     answer:
-      "Studio AI calls xAI images/edits with grok-imagine-image-2.0. If the host has no XAI_API_KEY, open Settings and paste your own. The browser key is stored AES-256-GCM in this browser only and takes precedence over the server key.",
+      "For now, Studio AI requires your own xAI API key. Open Settings and paste it there. The key is stored AES-256-GCM encrypted in this browser and is sent only with your image request. A paid credit option is planned.",
   },
 ] as const;
 
